@@ -56,6 +56,9 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
   const [isStoppingVM, setIsStoppingVM] = useState(false);
   const [isDeletingVM, setIsDeletingVM] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState<'aws' | 'azure' | 'proxmox'>('aws');
+  const [isSavingCredentials, setIsSavingCredentials] = useState(false);
 
   const [virtualMachines] = useState<VirtualMachine[]>([
     {
@@ -189,11 +192,18 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                 <Database className={darkMode ? 'w-6 h-6 text-gray-300' : 'w-6 h-6 text-gray-600'} />
               </button>
               <button
+                onClick={() => setIsCredentialsModalOpen(true)}
+                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                aria-label="Cloud Provider Credentials"
+              >
+                <KeyRound className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+              </button>
+              <button
                 onClick={onLogout}
                 className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                 aria-label="Logout"
               >
-                <KeyRound className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+                <Power className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
               </button>
             </div>
           </div>
@@ -433,11 +443,333 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                     </td>
                   </tr>
                 ))}
+      {/* Cloud Provider Credentials Modal */}
+      {isCredentialsModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-2xl w-full p-6`}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <KeyRound className="w-6 h-6 mr-2 text-blue-500" />
+                <h3 className="text-xl font-semibold">Cloud Provider Credentials</h3>
+              </div>
+              <button
+                onClick={() => setIsCredentialsModalOpen(false)}
+                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Provider Selection */}
+              <div>
+                <h4 className="text-lg font-medium mb-3">Select Cloud Provider</h4>
+                <div className="flex space-x-2">
+                  <button
+                    onClick={() => setSelectedProvider('aws')}
+                    className={`flex items-center px-4 py-2 rounded-md ${
+                      selectedProvider === 'aws' 
+                        ? darkMode ? 'bg-orange-900 text-orange-100' : 'bg-orange-100 text-orange-800'
+                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Cloud className="w-4 h-4 mr-2 text-orange-500" />
+                    AWS
+                  </button>
+                  <button
+                    onClick={() => setSelectedProvider('azure')}
+                    className={`flex items-center px-4 py-2 rounded-md ${
+                      selectedProvider === 'azure' 
+                        ? darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
+                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Cloud className="w-4 h-4 mr-2 text-blue-500" />
+                    Azure
+                  </button>
+                  <button
+                    onClick={() => setSelectedProvider('proxmox')}
+                    className={`flex items-center px-4 py-2 rounded-md ${
+                      selectedProvider === 'proxmox' 
+                        ? darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'
+                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    <Server className="w-4 h-4 mr-2 text-green-500" />
+                    Proxmox
+                  </button>
+                </div>
+              </div>
               </tbody>
+              {/* AWS Credentials */}
+              {selectedProvider === 'aws' && (
+                <div>
+                  <h4 className="text-lg font-medium mb-3">AWS Credentials</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Access Key ID *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="AKIA..."
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Secret Access Key *
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="••••••••••••••••••••••••••••••••••••••••"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Default Region
+                      </label>
+                      <select
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white'
+                            : 'bg-white border-gray-300 text-gray-900'
+                        }`}
+                      >
+                        <option value="us-east-1">US East (N. Virginia)</option>
+                        <option value="us-west-2">US West (Oregon)</option>
+                        <option value="eu-west-1">Europe (Ireland)</option>
+                        <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Session Token (Optional)
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="For temporary credentials"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </table>
+              {/* Azure Credentials */}
+              {selectedProvider === 'azure' && (
+                <div>
+                  <h4 className="text-lg font-medium mb-3">Azure Credentials</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Subscription ID *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Client ID *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Application (client) ID"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Client Secret *
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="••••••••••••••••••••••••••••••••••••••••"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Tenant ID *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Directory (tenant) ID"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+          </div>
+              {/* Proxmox Credentials */}
+              {selectedProvider === 'proxmox' && (
+                <div>
+                  <h4 className="text-lg font-medium mb-3">Proxmox Credentials</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Server URL *
+                      </label>
+                      <input
+                        type="url"
+                        placeholder="https://proxmox.example.com:8006"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Username *
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="root@pam"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Password *
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="••••••••••••••••••••••••••••••••••••••••"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                        Node Name
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="pve"
+                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                          darkMode
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex items-center">
+                      <input
+                        type="checkbox"
+                        id="ignore-ssl"
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <label htmlFor="ignore-ssl" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Ignore SSL certificate errors (not recommended for production)
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+        </div>
+              {/* Security Notice */}
+              <div className={`p-4 rounded-lg ${darkMode ? 'bg-yellow-900 border-yellow-700' : 'bg-yellow-50 border-yellow-200'} border`}>
+                <div className="flex items-start">
+                  <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
+                  <div>
+                    <h5 className={`font-medium ${darkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
+                      Security Notice
+                    </h5>
+                    <p className={`text-sm mt-1 ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
+                      Your credentials will be encrypted and stored securely. We recommend using dedicated service accounts 
+                      with minimal required permissions for cloud provider access.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+      </main>
+            <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setIsCredentialsModalOpen(false)}
+                className={`px-4 py-2 rounded-md ${
+                  darkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setIsSavingCredentials(true);
+                  // Simulate API call to save credentials
+                  setTimeout(() => {
+                    setIsSavingCredentials(false);
+                    setIsCredentialsModalOpen(false);
+                    // Show success message or refresh provider list
+                  }, 2000);
+                }}
+                disabled={isSavingCredentials}
+                className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center ${
+                  isSavingCredentials ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
+              >
+                {isSavingCredentials ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    Save Credentials
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
-      </main>
+      )}
 
       {/* Stop Confirmation Modal */}
       {isStopConfirmationOpen && vmToStop && (
