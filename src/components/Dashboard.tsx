@@ -221,14 +221,12 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
             onClick={onViewLogs}
             className={`${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} rounded-lg shadow p-6 text-left transition-colors`}
           >
-            <div className="flex items-center">
+            <div>
               <FileText className="w-8 h-8 text-blue-500 mb-4" />
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold mb-2">System Logs</h3>
-                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  View logs from AWS, Azure, and Proxmox
-                </p>
-              </div>
+              <h3 className="text-lg font-semibold mb-2">System Logs</h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                View logs from AWS, Azure, and Proxmox
+              </p>
             </div>
           </button>
 
@@ -236,26 +234,22 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
             onClick={onViewMetrics}
             className={`${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} rounded-lg shadow p-6 text-left transition-colors`}
           >
-            <div className="flex items-center">
+            <div>
               <BarChart3 className="w-8 h-8 text-green-500 mb-4" />
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold mb-2">Performance Metrics</h3>
-                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Monitor CPU, memory, and network usage
-                </p>
-              </div>
+              <h3 className="text-lg font-semibold mb-2">Performance Metrics</h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Monitor CPU, memory, and network usage
+              </p>
             </div>
           </button>
 
           <button className={`${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} rounded-lg shadow p-6 text-left transition-colors`}>
-            <div className="flex items-center">
+            <div>
               <Settings className="w-8 h-8 text-purple-500 mb-4" />
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold mb-2">Settings</h3>
-                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                  Configure cloud providers and preferences
-                </p>
-              </div>
+              <h3 className="text-lg font-semibold mb-2">Settings</h3>
+              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                Configure cloud providers and preferences
+              </p>
             </div>
           </button>
         </div>
