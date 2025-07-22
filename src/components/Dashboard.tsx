@@ -575,63 +575,6 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                 </div>
               </div>
 
-              {/* Delete Confirmation Modal */}
-              {isDeleteConfirmationOpen && vmToDelete && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                  <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
-                    <div className="flex items-center mb-4">
-                      <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
-                      <h3 className="text-xl font-semibold">Delete Virtual Machine</h3>
-                    </div>
-                    <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                      Are you sure you want to delete {vmToDelete.name}? This action cannot be undone.
-                    </p>
-                    <div className="flex justify-end space-x-4">
-                      <button
-                        onClick={() => {
-                          setIsDeleteConfirmationOpen(false);
-                          setVmToDelete(null);
-                        }}
-                        className={`px-4 py-2 rounded-md ${
-                          darkMode
-                            ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                            : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                        }`}
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => {
-                          setIsDeletingVM(true);
-                          // Simulate API call
-                          setTimeout(() => {
-                            setIsDeletingVM(false);
-                            setIsDeleteConfirmationOpen(false);
-                            setVmToDelete(null);
-                          }, 2000);
-                        }}
-                        disabled={isDeletingVM}
-                        className={`px-4 py-2 rounded-md bg-red-600 text-white flex items-center ${
-                          isDeletingVM ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-700'
-                        }`}
-                      >
-                        {isDeletingVM ? (
-                          <>
-                            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                            Deleting...
-                          </>
-                        ) : (
-                          <>
-                            <Trash2 className="w-4 h-4 mr-2" />
-                            Delete VM
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Auto-refresh Settings */}
               <div>
                 <h4 className="text-lg font-medium mb-3">Dashboard</h4>
@@ -718,6 +661,63 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
               >
                 <Save className="w-4 h-4 mr-2" />
                 Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {isDeleteConfirmationOpen && vmToDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
+            <div className="flex items-center mb-4">
+              <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
+              <h3 className="text-xl font-semibold">Delete Virtual Machine</h3>
+            </div>
+            <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              Are you sure you want to delete {vmToDelete.name}? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => {
+                  setIsDeleteConfirmationOpen(false);
+                  setVmToDelete(null);
+                }}
+                className={`px-4 py-2 rounded-md ${
+                  darkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  setIsDeletingVM(true);
+                  // Simulate API call
+                  setTimeout(() => {
+                    setIsDeletingVM(false);
+                    setIsDeleteConfirmationOpen(false);
+                    setVmToDelete(null);
+                  }, 2000);
+                }}
+                disabled={isDeletingVM}
+                className={`px-4 py-2 rounded-md bg-red-600 text-white flex items-center ${
+                  isDeletingVM ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-700'
+                }`}
+              >
+                {isDeletingVM ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete VM
+                  </>
+                )}
               </button>
             </div>
           </div>
