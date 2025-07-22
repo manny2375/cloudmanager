@@ -3,7 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, Legend, AreaChart, Area
 } from 'recharts';
-import { Activity, Cpu, HardDrive, Network, Server, Cloud, TrendingUp, TrendingDown } from 'lucide-react';
+import { Activity, Cpu, HardDrive, Network, Server, Cloud, TrendingUp, TrendingDown, RefreshCw, X } from 'lucide-react';
 import CloudMonitoringService, { MetricData } from '../services/monitoring';
 
 interface MetricsViewProps {
@@ -29,54 +29,57 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
   const [metrics, setMetrics] = useState<MetricData[]>([]);
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [selectedTimeRange, setSelectedTimeRange] = useState<'1h' | '6h' | '24h' | '7d'>('1h');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     const monitoring = CloudMonitoringService.getInstance();
     
-    // Get initial metrics
-    setMetrics(monitoring.getMetrics());
+    // Get initial metrics and start collecting from cloud providers
+    const initializeMetrics = async () => {
+      setIsInitialLoad(true);
+      
+      // Force initial collection from all providers
+      await monitoring.collectMetrics();
+      
+      // Get all existing metrics
+      const existingMetrics = monitoring.getMetrics();
+      setMetrics(existingMetrics);
+      processMetricsForChart(existingMetrics);
+      
+      setIsInitialLoad(false);
+    };
     
-    // Subscribe to metric updates
+    initializeMetrics();
+    
+    // Subscribe to metric updates from the monitoring service
     const unsubscribe = monitoring.subscribe(() => {
       const newMetrics = monitoring.getMetrics();
       setMetrics(newMetrics);
       processMetricsForChart(newMetrics);
     });
 
-    // Generate initial chart data
-    generateMockHistoricalData();
-
-    return () => unsubscribe();
-  }, []);
-
-  const generateMockHistoricalData = () => {
-    const data: ChartData[] = [];
-    const now = new Date();
+    // Set up auto-refresh interval if enabled
+    let refreshInterval: NodeJS.Timeout | null = null;
     
-    // Generate data points for the last hour (every 5 minutes)
-    for (let i = 12; i >= 0; i--) {
-      const timestamp = new Date(now.getTime() - i * 5 * 60 * 1000);
-      data.push({
-        timestamp: timestamp.toISOString(),
-        time: timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        aws_cpu: 20 + Math.random() * 15 + Math.sin(i * 0.5) * 5,
-        azure_cpu: 15 + Math.random() * 10 + Math.cos(i * 0.3) * 3,
-        proxmox_cpu: 30 + Math.random() * 20 + Math.sin(i * 0.7) * 8,
-        aws_memory: 60 + Math.random() * 15,
-        azure_memory: 45 + Math.random() * 20,
-        proxmox_memory: 40 + Math.random() * 25,
-        aws_network: Math.random() * 1000000,
-        azure_network: Math.random() * 800000,
-        proxmox_network: Math.random() * 1200000
-      });
+    if (autoRefresh) {
+      refreshInterval = setInterval(async () => {
+        await monitoring.collectMetrics();
+      }, 30000); // Refresh every 30 seconds
     }
-    
-    setChartData(data);
-  };
+
+    return () => {
+      unsubscribe();
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [autoRefresh]);
 
   const processMetricsForChart = (newMetrics: MetricData[]) => {
-    // Group metrics by timestamp and platform
-    const grouped = newMetrics.reduce((acc, metric) => {
+    // Group metrics by timestamp and platform for chart display
+    const grouped = newMetrics.slice(0, 50).reduce((acc, metric) => {
       const time = new Date(metric.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const platform = metric.dimensions?.Platform?.toLowerCase();
       
@@ -89,7 +92,7 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
       
       if (platform && metric.metricName.toLowerCase().includes('cpu')) {
         acc[metric.timestamp][`${platform}_cpu`] = metric.value;
-      } else if (platform && metric.metricName.toLowerCase().includes('memory')) {
+      } else if (platform && (metric.metricName.toLowerCase().includes('memory') || metric.metricName.toLowerCase().includes('available'))) {
         acc[metric.timestamp][`${platform}_memory`] = metric.value;
       } else if (platform && metric.metricName.toLowerCase().includes('network')) {
         acc[metric.timestamp][`${platform}_network`] = metric.value;
@@ -99,11 +102,34 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
     }, {} as Record<string, any>);
 
     const newChartData = Object.values(grouped) as ChartData[];
-    setChartData(prev => [...prev, ...newChartData].slice(-20)); // Keep last 20 data points
+    
+    // Sort by timestamp and keep last 20 data points
+    const sortedData = newChartData
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+      .slice(-20);
+    
+    setChartData(sortedData);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    const monitoring = CloudMonitoringService.getInstance();
+    
+    // Force collection of new metrics from all cloud providers
+    await monitoring.collectMetrics();
+    
+    // Log the refresh activity
+    monitoring.logEvent('info', 'Manual metrics refresh triggered');
+    
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
   };
 
   const getCurrentMetrics = () => {
-    const latest = metrics.slice(0, 6); // Get latest 6 metrics
+    // Get the most recent metrics for each platform and metric type
+    const latest = metrics.slice(0, 20);
+    
     return {
       aws: {
         cpu: latest.find(m => m.dimensions?.Platform === 'AWS' && m.metricName.includes('CPU'))?.value || 0,
@@ -113,7 +139,7 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
       azure: {
         cpu: latest.find(m => m.dimensions?.Platform === 'Azure' && m.metricName.includes('CPU'))?.value || 0,
         memory: latest.find(m => m.dimensions?.Platform === 'Azure' && m.metricName.includes('Memory'))?.value || 0,
-        network: latest.find(m => m.dimensions?.Platform === 'Azure' && m.metricName.includes('Memory'))?.value || 0
+        network: latest.find(m => m.dimensions?.Platform === 'Azure' && m.metricName.includes('Network'))?.value || 0
       },
       proxmox: {
         cpu: latest.find(m => m.dimensions?.Platform === 'Proxmox' && m.metricName.includes('cpu'))?.value || 0,
@@ -124,6 +150,13 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
   };
 
   const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 B';
+    
+    // Handle percentage values (for memory usage)
+    if (bytes < 100 && bytes > 0) {
+      return `${bytes.toFixed(1)}%`;
+    }
+    
     const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
     if (bytes === 0) return '0 B';
     const i = Math.floor(Math.log(bytes) / Math.log(1024));
@@ -131,6 +164,13 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
   };
 
   const currentMetrics = getCurrentMetrics();
+  
+  const getMetricStats = () => {
+    return {
+      total: metrics.length,
+      lastUpdate: metrics.length > 0 ? new Date(metrics[0].timestamp).toLocaleTimeString() : 'Never'
+    };
+  };
 
   return (
     <div className={`h-full ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
@@ -140,8 +180,40 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
           <div className="flex items-center">
             <TrendingUp className="w-6 h-6 mr-3 text-green-500" />
             <h2 className="text-2xl font-semibold">Performance Metrics</h2>
+            <div className="ml-3 flex items-center space-x-2">
+              <span className={`px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                {getMetricStats().total} metrics
+              </span>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={onClose}
+              className={`flex items-center px-3 py-2 rounded-md ${
+                darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="mr-2 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <span className="text-sm">Auto-refresh</span>
+            </label>
+            <button
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className={`flex items-center px-3 py-2 rounded-md ${
+                darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              } ${isRefreshing ? 'opacity-75 cursor-not-allowed' : ''}`}
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
             <select
               value={selectedTimeRange}
               onChange={(e) => setSelectedTimeRange(e.target.value as any)}
@@ -161,6 +233,15 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
       </div>
 
       <div className="p-6 space-y-6">
+        {/* Metrics Status */}
+        <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-gray-50'}`}>
+          <div className="text-sm text-center">
+            <span className="opacity-75">Last updated: </span>
+            <span className="font-medium">{getMetricStats().lastUpdate}</span>
+            {isInitialLoad && <span className="ml-2 text-blue-500">Loading metrics...</span>}
+          </div>
+        </div>
+
         {/* Current Metrics Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* AWS Metrics */}
@@ -176,11 +257,11 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm opacity-75">Memory</span>
-                <span className="text-sm font-medium">{formatBytes(currentMetrics.aws.memory)}</span>
+                <span className="text-sm font-medium">{currentMetrics.aws.memory > 1000 ? formatBytes(currentMetrics.aws.memory) : `${currentMetrics.aws.memory.toFixed(1)}%`}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-sm opacity-75">Network In</span>
-                <span className="text-sm font-medium">{formatBytes(currentMetrics.aws.network)}</span>
+                <span className="text-sm font-medium">{currentMetrics.aws.network > 1000 ? formatBytes(currentMetrics.aws.network) : `${currentMetrics.aws.network.toFixed(1)} MB/s`}</span>
               </div>
             </div>
           </div>
@@ -198,11 +279,11 @@ export default function MetricsView({ darkMode, onClose }: MetricsViewProps) {
               </div>
               <div className="flex justify-between">
                 <span className="text-sm opacity-75">Memory</span>
-                <span className="text-sm font-medium">{formatBytes(currentMetrics.azure.memory)}</span>
+                <span className="text-sm font-medium">{currentMetrics.azure.memory > 1000 ? formatBytes(currentMetrics.azure.memory) : `${currentMetrics.azure.memory.toFixed(1)}%`}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm opacity-75">Available Memory</span>
-                <span className="text-sm font-medium">{formatBytes(currentMetrics.azure.network)}</span>
+                <span className="text-sm opacity-75">Network</span>
+                <span className="text-sm font-medium">{currentMetrics.azure.network > 1000 ? formatBytes(currentMetrics.azure.network) : `${currentMetrics.azure.network.toFixed(1)} MB/s`}</span>
               </div>
             </div>
           </div>

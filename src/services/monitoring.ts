@@ -283,66 +283,102 @@ class CloudMonitoringService {
     const metrics: MetricData[] = [];
     const timestamp = new Date().toISOString();
 
-    // AWS CloudWatch Metrics
+    // AWS CloudWatch Metrics - simulate real AWS metrics
+    const awsCpuValue = 15 + Math.random() * 25 + Math.sin(Date.now() / 60000) * 5;
+    const awsMemoryValue = 50 + Math.random() * 30;
+    const awsNetworkValue = 500000 + Math.random() * 2000000;
+    
     metrics.push(
       {
         timestamp,
         metricName: 'CPUUtilization',
-        value: 25.4,
+        value: awsCpuValue,
         unit: 'Percent',
         dimensions: { InstanceId: 'i-1234567890abcdef0', Platform: 'AWS' }
       },
       {
         timestamp,
         metricName: 'NetworkIn',
-        value: 1245000,
+        value: awsNetworkValue,
         unit: 'Bytes',
+        dimensions: { InstanceId: 'i-1234567890abcdef0', Platform: 'AWS' }
+      },
+      {
+        timestamp,
+        metricName: 'MemoryUtilization',
+        value: awsMemoryValue,
+        unit: 'Percent',
         dimensions: { InstanceId: 'i-1234567890abcdef0', Platform: 'AWS' }
       }
     );
 
-    // Azure Monitor Metrics
+    // Azure Monitor Metrics - simulate real Azure metrics
+    const azureCpuValue = 10 + Math.random() * 20 + Math.cos(Date.now() / 45000) * 3;
+    const azureMemoryValue = 4000000000 + Math.random() * 2000000000; // Available memory in bytes
+    const azureNetworkValue = 300000 + Math.random() * 1500000;
+    
     metrics.push(
       {
         timestamp,
         metricName: 'Percentage CPU',
-        value: 15.8,
+        value: azureCpuValue,
         unit: 'Percent',
         dimensions: { VMName: 'dev-db-01', Platform: 'Azure' }
       },
       {
         timestamp,
         metricName: 'Available Memory Bytes',
-        value: 6644967424,
+        value: azureMemoryValue,
+        unit: 'Bytes',
+        dimensions: { VMName: 'dev-db-01', Platform: 'Azure' }
+      },
+      {
+        timestamp,
+        metricName: 'Network In Total',
+        value: azureNetworkValue,
         unit: 'Bytes',
         dimensions: { VMName: 'dev-db-01', Platform: 'Azure' }
       }
     );
 
-    // Proxmox Metrics
+    // Proxmox Metrics - simulate real Proxmox metrics
+    const proxmoxCpuValue = 25 + Math.random() * 30 + Math.sin(Date.now() / 30000) * 8;
+    const proxmoxMemoryValue = 40 + Math.random() * 35;
+    const proxmoxNetworkValue = 800000 + Math.random() * 1800000;
+    
     metrics.push(
       {
         timestamp,
         metricName: 'cpu',
-        value: 35.2,
+        value: proxmoxCpuValue,
         unit: 'Percent',
         dimensions: { VMID: '101', Platform: 'Proxmox' }
       },
       {
         timestamp,
         metricName: 'memory',
-        value: 45.8,
+        value: proxmoxMemoryValue,
         unit: 'Percent',
+        dimensions: { VMID: '101', Platform: 'Proxmox' }
+      },
+      {
+        timestamp,
+        metricName: 'netin',
+        value: proxmoxNetworkValue,
+        unit: 'Bytes',
         dimensions: { VMID: '101', Platform: 'Proxmox' }
       }
     );
 
     this.metrics.push(...metrics);
     
-    // Keep only last 500 metrics
-    if (this.metrics.length > 500) {
-      this.metrics = this.metrics.slice(0, 500);
+    // Keep only last 200 metrics for performance
+    if (this.metrics.length > 200) {
+      this.metrics = this.metrics.slice(0, 200);
     }
+
+    // Log collection activity
+    this.logEvent('debug', `Collected ${metrics.length} metrics from AWS, Azure, and Proxmox`);
 
     return metrics;
   }
