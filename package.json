@@ -8,9 +8,9 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "deploy:frontend": "npm run build",
-    "deploy:backend": "npx wrangler deploy --env production",
-    "dev:backend": "wrangler dev --config wrangler.worker.toml --env development"
+    "deploy": "npx wrangler deploy --env production",
+    "dev:worker": "npx wrangler dev --env development",
+    "build:worker": "npx wrangler deploy --dry-run"
   },
   "dependencies": {
     "@headlessui/react": "^1.7.18",
