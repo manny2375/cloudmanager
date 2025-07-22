@@ -1,5 +1,5 @@
 # Backend Worker Configuration
-name = "cloudmanager-api"
+name = "cloudmanager"
 main = "src/worker/index.ts"
 compatibility_date = "2024-01-15"
 
@@ -13,14 +13,14 @@ database_id = "d5a88802-2ef8-4878-b882-97f8b2aa37af"
 
 # Production environment for the API worker
 [env.production]
-name = "cloudmanager-api"
+name = "cloudmanager"
 
 [env.production.vars]
 ENVIRONMENT = "production"
 
 # Development environment
 [env.development]
-name = "cloudmanager-api-dev"
+name = "cloudmanager"
 
 [env.development.vars]
 ENVIRONMENT = "development"

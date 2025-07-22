@@ -10,10 +10,10 @@ command = "npm run build"
 
 # Environment variables for Pages
 [env.production.vars]
-VITE_API_URL = "https://cloudmanager-api.lamado.workers.dev"
+VITE_API_URL = "https://cloudmanager.lamado.workers.dev"
 
 [env.preview.vars]
-VITE_API_URL = "https://cloudmanager-api-dev.lamado.workers.dev"
+VITE_API_URL = "https://cloudmanager.lamado.workers.dev"
 
 # Backend Worker Configuration (separate deployment)
 # Deploy with: wrangler deploy --config wrangler.worker.toml
