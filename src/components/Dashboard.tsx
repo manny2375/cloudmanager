@@ -443,6 +443,12 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                     </td>
                   </tr>
                 ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
+
       {/* Cloud Provider Credentials Modal */}
       {isCredentialsModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -500,7 +506,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                   </button>
                 </div>
               </div>
-              </tbody>
+
               {/* AWS Credentials */}
               {selectedProvider === 'aws' && (
                 <div>
@@ -568,7 +574,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                   </div>
                 </div>
               )}
-            </table>
+
               {/* Azure Credentials */}
               {selectedProvider === 'azure' && (
                 <div>
@@ -633,7 +639,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                   </div>
                 </div>
               )}
-          </div>
+
               {/* Proxmox Credentials */}
               {selectedProvider === 'proxmox' && (
                 <div>
@@ -710,7 +716,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                   </div>
                 </div>
               )}
-        </div>
+
               {/* Security Notice */}
               <div className={`p-4 rounded-lg ${darkMode ? 'bg-yellow-900 border-yellow-700' : 'bg-yellow-50 border-yellow-200'} border`}>
                 <div className="flex items-start">
@@ -727,7 +733,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                 </div>
               </div>
             </div>
-      </main>
+
             <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
               <button
                 onClick={() => setIsCredentialsModalOpen(false)}
