@@ -493,6 +493,87 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
         </div>
       )}
 
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-2xl w-full p-6`}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <Settings className="w-6 h-6 mr-2 text-blue-500" />
+                <h3 className="text-xl font-semibold">Settings</h3>
+              </div>
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              {/* Theme Settings */}
+              <div>
+                <h4 className="text-lg font-medium mb-3">Appearance</h4>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                      Dark Mode
+                    </p>
+                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                      Toggle between light and dark themes
+                    </p>
+                  </div>
+                  <button
+                    onClick={onToggleDarkMode}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      darkMode ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        darkMode ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Notification Settings */}
+              <div>
+                <h4 className="text-lg font-medium mb-3">Notifications</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                        Email Notifications
+                      </p>
+                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Receive email alerts for VM status changes
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      defaultChecked
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                        Cost Alerts
+                      </p>
+                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Get notified when monthly costs exceed budget
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      defaultChecked
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </div>
+                </div>
+              </div>
       {/* Delete Confirmation Modal */}
       {isDeleteConfirmationOpen && vmToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -544,6 +625,95 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                     Delete VM
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+              {/* Auto-refresh Settings */}
+              <div>
+                <h4 className="text-lg font-medium mb-3">Dashboard</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                      Auto-refresh Interval
+                    </label>
+                    <select
+                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        darkMode
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      }`}
+                      defaultValue="30"
+                    >
+                      <option value="10">10 seconds</option>
+                      <option value="30">30 seconds</option>
+                      <option value="60">1 minute</option>
+                      <option value="300">5 minutes</option>
+                      <option value="0">Disabled</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+        </div>
+              {/* Account Settings */}
+              <div>
+                <h4 className="text-lg font-medium mb-3">Account</h4>
+                <div className="space-y-3">
+                  <div>
+                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
+                      Default View
+                    </label>
+                    <select
+                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                        darkMode
+                          ? 'bg-gray-700 border-gray-600 text-white'
+                          : 'bg-white border-gray-300 text-gray-900'
+                      }`}
+                      defaultValue="dashboard"
+                    >
+                      <option value="dashboard">Dashboard</option>
+                      <option value="metrics">Metrics</option>
+                      <option value="logs">Logs</option>
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
+                        Show Resource Usage
+                      </p>
+                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                        Display detailed resource information in VM table
+                      </p>
+                    </div>
+                    <input
+                      type="checkbox"
+                      defaultChecked
+                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+      )}
+            <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setIsSettingsOpen(false)}
+                className={`px-4 py-2 rounded-md ${
+                  darkMode
+                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                }`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  // Save settings logic would go here
+                  setIsSettingsOpen(false);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                Save Settings
               </button>
             </div>
           </div>
