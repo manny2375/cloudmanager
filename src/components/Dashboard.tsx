@@ -241,45 +241,6 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <button
-            onClick={onViewLogs}
-            className={`${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} rounded-lg shadow p-6 text-left transition-colors`}
-          >
-            <div>
-              <FileText className="w-8 h-8 text-blue-500 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">System Logs</h3>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                View logs from AWS, Azure, and Proxmox
-              </p>
-            </div>
-          </button>
-
-          <button
-            onClick={onViewMetrics}
-            className={`${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} rounded-lg shadow p-6 text-left transition-colors`}
-          >
-            <div>
-              <BarChart3 className="w-8 h-8 text-green-500 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Performance Metrics</h3>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Monitor CPU, memory, and network usage
-              </p>
-            </div>
-          </button>
-
-          <button className={`${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} rounded-lg shadow p-6 text-left transition-colors`}>
-            <div>
-              <Settings className="w-8 h-8 text-purple-500 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Settings</h3>
-              <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                Configure cloud providers and preferences
-              </p>
-            </div>
-          </button>
-        </div>
-
         {/* Virtual Machines */}
         <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow`}>
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
