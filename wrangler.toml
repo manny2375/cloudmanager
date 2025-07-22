@@ -1,0 +1,19 @@
+name = "cloud-management-dashboard"
+main = "src/lib/cloudflare-worker.ts"
+compatibility_date = "2024-01-15"
+
+[vars]
+ENVIRONMENT = "development"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "cloudmanager-db"
+database_id = "d5a88802-2ef8-4878-b882-97f8b2aa37af"
+
+# Pages configuration for frontend
+[env.production]
+name = "cloud-management-dashboard-api"
+route = { pattern = "api.yourdomain.com/*", zone_name = "yourdomain.com" }
+
+[env.production.vars]
+ENVIRONMENT = "production"
