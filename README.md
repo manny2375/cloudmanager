@@ -67,6 +67,9 @@ The application uses a comprehensive database schema with the following main tab
    
    # For production
    npm run db:migrate
+   
+   # To reset database (if needed)
+   npm run db:reset
    ```
 
 4. **Set up JWT Secret in Cloudflare Workers**:

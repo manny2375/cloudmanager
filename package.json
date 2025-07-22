@@ -13,6 +13,7 @@
     "deploy": "npm run deploy:backend && npm run deploy:frontend",
     "db:migrate": "wrangler d1 execute cloudmanager-db --file=./schema.sql",
     "db:local": "wrangler d1 execute cloudmanager-db --local --file=./schema.sql",
+    "db:reset": "wrangler d1 execute cloudmanager-db --command=\"DROP TABLE IF EXISTS users; DROP TABLE IF EXISTS cloud_providers; DROP TABLE IF EXISTS virtual_machines; DROP TABLE IF EXISTS vm_metrics; DROP TABLE IF EXISTS audit_logs; DROP TABLE IF EXISTS app_settings; DROP TABLE IF EXISTS cost_records;\" && npm run db:migrate",
     "dev:worker": "wrangler dev",
     "dev:full": "concurrently \"npm run dev\" \"npm run dev:worker\""
   },
