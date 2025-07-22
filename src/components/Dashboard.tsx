@@ -53,12 +53,103 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showNewVMModal, setShowNewVMModal] = useState(false);
+  const [vmConfigMode, setVmConfigMode] = useState<'preset' | 'custom'>('preset');
   const [isCreatingVM, setIsCreatingVM] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     aws_secret: false,
     azure_secret: false,
     proxmox_password: false
   });
+
+  // Preset VM configurations
+  const presetVMs = [
+    {
+      id: 'web-server-small',
+      name: 'Web Server (Small)',
+      description: 'Perfect for small websites and development',
+      provider: 'aws',
+      instanceType: 't3.small',
+      os: 'ubuntu-20.04',
+      cpuCores: 2,
+      memory: 2,
+      storage: 20,
+      costPerHour: 0.0208,
+      icon: '🌐',
+      tags: ['web', 'development']
+    },
+    {
+      id: 'database-medium',
+      name: 'Database Server (Medium)',
+      description: 'Optimized for database workloads',
+      provider: 'aws',
+      instanceType: 't3.medium',
+      os: 'ubuntu-20.04',
+      cpuCores: 2,
+      memory: 4,
+      storage: 100,
+      costPerHour: 0.0416,
+      icon: '🗄️',
+      tags: ['database', 'production']
+    },
+    {
+      id: 'app-server-large',
+      name: 'Application Server (Large)',
+      description: 'High-performance application hosting',
+      provider: 'aws',
+      instanceType: 't3.large',
+      os: 'ubuntu-20.04',
+      cpuCores: 2,
+      memory: 8,
+      storage: 50,
+      costPerHour: 0.0832,
+      icon: '⚡',
+      tags: ['application', 'production']
+    },
+    {
+      id: 'windows-desktop',
+      name: 'Windows Desktop',
+      description: 'Windows Server for remote desktop',
+      provider: 'azure',
+      instanceType: 'Standard_B2s',
+      os: 'windows-server-2022',
+      cpuCores: 2,
+      memory: 4,
+      storage: 30,
+      costPerHour: 0.0496,
+      icon: '🖥️',
+      tags: ['windows', 'desktop']
+    },
+    {
+      id: 'dev-environment',
+      name: 'Development Environment',
+      description: 'Cost-effective development setup',
+      provider: 'proxmox',
+      instanceType: 'dev-small',
+      os: 'ubuntu-22.04',
+      cpuCores: 1,
+      memory: 2,
+      storage: 25,
+      costPerHour: 0.015,
+      icon: '💻',
+      tags: ['development', 'testing']
+    },
+    {
+      id: 'ml-workstation',
+      name: 'ML Workstation',
+      description: 'Machine learning and AI workloads',
+      provider: 'aws',
+      instanceType: 'p3.2xlarge',
+      os: 'ubuntu-20.04',
+      cpuCores: 8,
+      memory: 61,
+      storage: 100,
+      costPerHour: 3.06,
+      icon: '🤖',
+      tags: ['ml', 'gpu', 'compute']
+    }
+  ];
+
+  const [selectedPreset, setSelectedPreset] = useState<string>('');
 
   // Load VMs from API
   useEffect(() => {
@@ -97,7 +188,27 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
     setIsCreatingVM(true);
     
     try {
-      const result = await apiClient.createVM(vmData);
+      let vmDataToSubmit = vmData;
+      
+      // If using preset mode, use the selected preset data
+      if (vmConfigMode === 'preset' && selectedPreset) {
+        const preset = presetVMs.find(p => p.id === selectedPreset);
+        if (preset) {
+          vmDataToSubmit = {
+            name: vmData.name || preset.name,
+            provider: preset.provider,
+            instanceType: preset.instanceType,
+            os: preset.os,
+            cpuCores: preset.cpuCores,
+            memory: preset.memory,
+            storage: preset.storage,
+            region: vmData.region,
+            securityGroup: vmData.securityGroup
+          };
+        }
+      }
+      
+      const result = await apiClient.createVM(vmDataToSubmit);
       if (result.error) {
         throw new Error(result.error);
       }
@@ -109,6 +220,8 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
       }
       
       setShowNewVMModal(false);
+      setVmConfigMode('preset');
+      setSelectedPreset('');
     } catch (error) {
       console.error('Failed to create VM:', error);
       // TODO: Show error message to user
@@ -763,6 +876,10 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                     >
                       <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6`} />
                     </button>
+                  </div>
+                </div>
+              </div>
+
               {/* Notification Settings */}
               <div className="mb-8">
                 <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
@@ -802,7 +919,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                   </div>
                 </div>
               </div>
-                  </div>
+
               {/* Data & Privacy */}
               <div className="mb-8">
                 <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
@@ -845,7 +962,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                   </div>
                 </div>
               </div>
-                </div>
+
               {/* Account Settings */}
               <div>
                 <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
@@ -875,7 +992,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                 </div>
               </div>
             </div>
-              </div>
+
             {/* Modal Footer */}
             <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-end space-x-3`}>
               <button
@@ -905,6 +1022,41 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
             <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Create New Virtual Machine</h3>
+                <div className="flex items-center space-x-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setVmConfigMode('preset');
+                      setSelectedPreset('');
+                    }}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      vmConfigMode === 'preset'
+                        ? darkMode 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-blue-600 text-white'
+                        : darkMode
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Preset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVmConfigMode('custom')}
+                    className={`px-3 py-1 rounded-md text-sm font-medium transition-colors ${
+                      vmConfigMode === 'custom'
+                        ? darkMode 
+                          ? 'bg-blue-600 text-white' 
+                          : 'bg-blue-600 text-white'
+                        : darkMode
+                          ? 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    Custom
+                  </button>
+                </div>
                 <button
                   onClick={() => setShowNewVMModal(false)}
                   className={`p-2 rounded-md ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
@@ -930,241 +1082,361 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
               };
               handleCreateVM(vmData);
             }}>
-              <div className="px-6 py-6 space-y-6">
-                {/* Basic Information */}
-                <div>
-                  <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                    Basic Information
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-6 space-y-6 max-h-[500px] overflow-y-auto">
+                {vmConfigMode === 'preset' ? (
+                  // Preset VM Selection
+                  <div className="space-y-4">
                     <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        VM Name *
+                      <label className="block text-sm font-medium mb-2">
+                        Choose a Preset Configuration
                       </label>
-                      <input
-                        type="text"
-                        name="name"
-                        required
-                        placeholder="my-web-server"
-                        className={`w-full px-3 py-2 border rounded-md ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {presetVMs.map((preset) => (
+                          <div
+                            key={preset.id}
+                            onClick={() => setSelectedPreset(preset.id)}
+                            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+                              selectedPreset === preset.id
+                                ? darkMode
+                                  ? 'border-blue-500 bg-blue-900/20'
+                                  : 'border-blue-500 bg-blue-50'
+                                : darkMode
+                                  ? 'border-gray-600 bg-gray-700 hover:border-gray-500'
+                                  : 'border-gray-200 bg-white hover:border-gray-300'
+                            }`}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className="text-2xl">{preset.icon}</div>
+                              <div className="flex-1">
+                                <h4 className="font-medium text-sm">{preset.name}</h4>
+                                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                                  {preset.description}
+                                </p>
+                                <div className="flex items-center justify-between mt-2">
+                                  <div className="flex items-center space-x-2 text-xs">
+                                    <span className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                                      {preset.cpuCores} vCPU
+                                    </span>
+                                    <span className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                                      {preset.memory}GB RAM
+                                    </span>
+                                    <span className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                                      {preset.storage}GB
+                                    </span>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-xs font-medium text-green-600">
+                                      ${preset.costPerHour}/hr
+                                    </div>
+                                    <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                      ~${(preset.costPerHour * 24 * 30).toFixed(0)}/mo
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Cloud Provider *
-                      </label>
-                      <select
-                        name="provider"
-                        required
-                        className={`w-full px-3 py-2 border rounded-md ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white' 
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      >
-                        <option value="">Select Provider</option>
-                        <option value="aws">Amazon Web Services</option>
-                        <option value="azure">Microsoft Azure</option>
-                        <option value="proxmox">Proxmox</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Instance Configuration */}
-                <div>
-                  <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                    Instance Configuration
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Instance Type *
-                      </label>
-                      <select
-                        name="instanceType"
-                        required
-                        className={`w-full px-3 py-2 border rounded-md ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white' 
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      >
-                        <option value="">Select Instance Type</option>
-                        <option value="t3.micro">t3.micro (1 vCPU, 1GB RAM)</option>
-                        <option value="t3.small">t3.small (2 vCPU, 2GB RAM)</option>
-                        <option value="t3.medium">t3.medium (2 vCPU, 4GB RAM)</option>
-                        <option value="t3.large">t3.large (2 vCPU, 8GB RAM)</option>
-                        <option value="m5.large">m5.large (2 vCPU, 8GB RAM)</option>
-                        <option value="m5.xlarge">m5.xlarge (4 vCPU, 16GB RAM)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Operating System *
-                      </label>
-                      <select
-                        name="operatingSystem"
-                        required
-                        className={`w-full px-3 py-2 border rounded-md ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white' 
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      >
-                        <option value="">Select OS</option>
-                        <option value="ubuntu-22.04">Ubuntu 22.04 LTS</option>
-                        <option value="ubuntu-20.04">Ubuntu 20.04 LTS</option>
-                        <option value="centos-8">CentOS 8</option>
-                        <option value="debian-11">Debian 11</option>
-                        <option value="windows-server-2022">Windows Server 2022</option>
-                        <option value="windows-server-2019">Windows Server 2019</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
+                    {/* Basic settings for preset */}
+                    {selectedPreset && (
+                      <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            VM Name (Optional - will use preset name if empty)
+                          </label>
+                          <input
+                            type="text"
+                            name="name"
+                            placeholder={presetVMs.find(p => p.id === selectedPreset)?.name}
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          />
+                        </div>
 
-                {/* Resource Allocation */}
-                <div>
-                  <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                    Resource Allocation
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        CPU Cores *
-                      </label>
-                      <select
-                        name="cpu"
-                        required
-                        className={`w-full px-3 py-2 border rounded-md ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white' 
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      >
-                        <option value="">Select CPU</option>
-                        <option value="1">1 vCPU</option>
-                        <option value="2">2 vCPU</option>
-                        <option value="4">4 vCPU</option>
-                        <option value="8">8 vCPU</option>
-                        <option value="16">16 vCPU</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Memory (GB) *
-                      </label>
-                      <select
-                        name="memory"
-                        required
-                        className={`w-full px-3 py-2 border rounded-md ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white' 
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      >
-                        <option value="">Select RAM</option>
-                        <option value="1">1 GB</option>
-                        <option value="2">2 GB</option>
-                        <option value="4">4 GB</option>
-                        <option value="8">8 GB</option>
-                        <option value="16">16 GB</option>
-                        <option value="32">32 GB</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Storage (GB) *
-                      </label>
-                      <select
-                        name="storage"
-                        required
-                        className={`w-full px-3 py-2 border rounded-md ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white' 
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      >
-                        <option value="">Select Storage</option>
-                        <option value="20">20 GB</option>
-                        <option value="50">50 GB</option>
-                        <option value="100">100 GB</option>
-                        <option value="200">200 GB</option>
-                        <option value="500">500 GB</option>
-                        <option value="1000">1 TB</option>
-                      </select>
-                    </div>
-                  </div>
-                </div>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Region</label>
+                            <select
+                              name="region"
+                              className={`w-full px-3 py-2 border rounded-md ${
+                                darkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white' 
+                                  : 'bg-white border-gray-300 text-gray-900'
+                              } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                            >
+                              <option value="">Select Region</option>
+                              <option value="us-east-1">US East (N. Virginia)</option>
+                              <option value="us-west-2">US West (Oregon)</option>
+                              <option value="eu-west-1">EU (Ireland)</option>
+                              <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                            </select>
+                          </div>
 
-                {/* Location */}
-                <div>
-                  <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
-                    Location & Network
-                  </h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Region *
-                      </label>
-                      <select
-                        name="region"
-                        required
-                        className={`w-full px-3 py-2 border rounded-md ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white' 
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      >
-                        <option value="">Select Region</option>
-                        <option value="us-east-1">US East (N. Virginia)</option>
-                        <option value="us-west-2">US West (Oregon)</option>
-                        <option value="eu-west-1">Europe (Ireland)</option>
-                        <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
-                        <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Security Group
-                      </label>
-                      <select
-                        name="securityGroup"
-                        className={`w-full px-3 py-2 border rounded-md ${
-                          darkMode 
-                            ? 'bg-gray-700 border-gray-600 text-white' 
-                            : 'bg-white border-gray-300 text-gray-900'
-                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                      >
-                        <option value="default">Default Security Group</option>
-                        <option value="web-server">Web Server (HTTP/HTTPS)</option>
-                        <option value="database">Database Server</option>
-                        <option value="custom">Custom Configuration</option>
-                      </select>
-                    </div>
+                          <div>
+                            <label className="block text-sm font-medium mb-2">Security Group</label>
+                            <select
+                              name="securityGroup"
+                              className={`w-full px-3 py-2 border rounded-md ${
+                                darkMode 
+                                  ? 'bg-gray-700 border-gray-600 text-white' 
+                                  : 'bg-white border-gray-300 text-gray-900'
+                              } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                            >
+                              <option value="">Default Security Group</option>
+                              <option value="web-server">Web Server (HTTP/HTTPS)</option>
+                              <option value="database">Database Server</option>
+                              <option value="ssh-only">SSH Only</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-
-                {/* Cost Estimate */}
-                <div className={`p-4 rounded-md ${darkMode ? 'bg-blue-900 border border-blue-700' : 'bg-blue-50 border border-blue-200'}`}>
-                  <div className="flex items-start">
-                    <DollarSign className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+                ) : (
+                  // Custom VM Configuration
+                  <div className="space-y-4">
+                    {/* Basic Information */}
                     <div>
-                      <h4 className={`text-sm font-medium ${darkMode ? 'text-blue-100' : 'text-blue-800'}`}>
-                        Estimated Cost
+                      <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        Basic Information
                       </h4>
-                      <p className={`text-sm mt-1 ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
-                        Approximately <strong>$0.05 - $0.15 per hour</strong> depending on configuration.
-                        Monthly estimate: <strong>$35 - $110</strong>
-                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            VM Name *
+                          </label>
+                          <input
+                            type="text"
+                            name="name"
+                            required
+                            placeholder="my-web-server"
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          />
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Cloud Provider *
+                          </label>
+                          <select
+                            name="provider"
+                            required
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          >
+                            <option value="">Select Provider</option>
+                            <option value="aws">Amazon Web Services</option>
+                            <option value="azure">Microsoft Azure</option>
+                            <option value="proxmox">Proxmox</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Instance Configuration */}
+                    <div>
+                      <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        Instance Configuration
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Instance Type *
+                          </label>
+                          <select
+                            name="instanceType"
+                            required
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          >
+                            <option value="">Select Instance Type</option>
+                            <option value="t3.micro">t3.micro (1 vCPU, 1GB RAM)</option>
+                            <option value="t3.small">t3.small (2 vCPU, 2GB RAM)</option>
+                            <option value="t3.medium">t3.medium (2 vCPU, 4GB RAM)</option>
+                            <option value="t3.large">t3.large (2 vCPU, 8GB RAM)</option>
+                            <option value="m5.large">m5.large (2 vCPU, 8GB RAM)</option>
+                            <option value="m5.xlarge">m5.xlarge (4 vCPU, 16GB RAM)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Operating System *
+                          </label>
+                          <select
+                            name="operatingSystem"
+                            required
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          >
+                            <option value="">Select OS</option>
+                            <option value="ubuntu-22.04">Ubuntu 22.04 LTS</option>
+                            <option value="ubuntu-20.04">Ubuntu 20.04 LTS</option>
+                            <option value="centos-8">CentOS 8</option>
+                            <option value="debian-11">Debian 11</option>
+                            <option value="windows-server-2022">Windows Server 2022</option>
+                            <option value="windows-server-2019">Windows Server 2019</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Resource Allocation */}
+                    <div>
+                      <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        Resource Allocation
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            CPU Cores *
+                          </label>
+                          <select
+                            name="cpu"
+                            required
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          >
+                            <option value="">Select CPU</option>
+                            <option value="1">1 vCPU</option>
+                            <option value="2">2 vCPU</option>
+                            <option value="4">4 vCPU</option>
+                            <option value="8">8 vCPU</option>
+                            <option value="16">16 vCPU</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Memory (GB) *
+                          </label>
+                          <select
+                            name="memory"
+                            required
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          >
+                            <option value="">Select RAM</option>
+                            <option value="1">1 GB</option>
+                            <option value="2">2 GB</option>
+                            <option value="4">4 GB</option>
+                            <option value="8">8 GB</option>
+                            <option value="16">16 GB</option>
+                            <option value="32">32 GB</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Storage (GB) *
+                          </label>
+                          <select
+                            name="storage"
+                            required
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          >
+                            <option value="">Select Storage</option>
+                            <option value="20">20 GB</option>
+                            <option value="50">50 GB</option>
+                            <option value="100">100 GB</option>
+                            <option value="200">200 GB</option>
+                            <option value="500">500 GB</option>
+                            <option value="1000">1 TB</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Location */}
+                    <div>
+                      <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                        Location & Network
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Region *
+                          </label>
+                          <select
+                            name="region"
+                            required
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          >
+                            <option value="">Select Region</option>
+                            <option value="us-east-1">US East (N. Virginia)</option>
+                            <option value="us-west-2">US West (Oregon)</option>
+                            <option value="eu-west-1">Europe (Ireland)</option>
+                            <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                            <option value="ap-northeast-1">Asia Pacific (Tokyo)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                            Security Group
+                          </label>
+                          <select
+                            name="securityGroup"
+                            className={`w-full px-3 py-2 border rounded-md ${
+                              darkMode 
+                                ? 'bg-gray-700 border-gray-600 text-white' 
+                                : 'bg-white border-gray-300 text-gray-900'
+                            } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          >
+                            <option value="default">Default Security Group</option>
+                            <option value="web-server">Web Server (HTTP/HTTPS)</option>
+                            <option value="database">Database Server</option>
+                            <option value="custom">Custom Configuration</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Cost Estimate */}
+                    <div className={`p-4 rounded-md ${darkMode ? 'bg-blue-900 border border-blue-700' : 'bg-blue-50 border border-blue-200'}`}>
+                      <div className="flex items-start">
+                        <DollarSign className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+                        <div>
+                          <h4 className={`text-sm font-medium ${darkMode ? 'text-blue-100' : 'text-blue-800'}`}>
+                            Estimated Cost
+                          </h4>
+                          <p className={`text-sm mt-1 ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                            Approximately <strong>$0.05 - $0.15 per hour</strong> depending on configuration.
+                            Monthly estimate: <strong>$35 - $110</strong>
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* Modal Footer */}
@@ -1180,9 +1452,9 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                 </button>
                 <button
                   type="submit"
-                  disabled={isCreatingVM}
+                  disabled={isCreatingVM || (vmConfigMode === 'preset' ? !selectedPreset : false)}
                   className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    isCreatingVM ? 'opacity-75 cursor-not-allowed' : ''
+                    isCreatingVM || (vmConfigMode === 'preset' ? !selectedPreset : false) ? 'opacity-75 cursor-not-allowed' : ''
                   }`}
                 >
                   {isCreatingVM ? (
