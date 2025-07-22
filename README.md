@@ -69,11 +69,13 @@ The application uses a comprehensive database schema with the following main tab
    npm run db:migrate
    ```
 
-4. **Set up environment variables**:
-   ```bash
-   # Add to wrangler.toml [vars] section
-   JWT_SECRET = "your-super-secret-jwt-key-here"
-   ENVIRONMENT = "production"
+4. **Set up JWT Secret in Cloudflare Workers**:
+   The JWT secret has been configured in the Worker environment:
+   - **Variable:** `JWT_SECRET`
+   - **Type:** Secret (encrypted)
+   - **Status:** ✅ Configured
+   
+   This secret is used for JWT token creation and verification in the authentication system.
    ```
 
 5. **Development**:

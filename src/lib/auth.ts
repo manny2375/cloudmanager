@@ -147,6 +147,9 @@ export class AuthService {
     
     const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
     const signatureArray = Array.from(new Uint8Array(signature));
-    return btoa(String.fromCharCode(...signatureArray));
+    return btoa(String.fromCharCode(...signatureArray))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
   }
 }
