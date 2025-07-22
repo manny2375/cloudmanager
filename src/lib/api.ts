@@ -1,8 +1,8 @@
 // API client for communicating with Cloudflare Workers backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.PROD 
-    ? 'https://cloudmanager.lamado.workers.dev' 
-    : 'http://localhost:8787');
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://cloudmanager.lamado.workers.dev';
+
+console.log('API Base URL:', API_BASE_URL);
+console.log('Environment:', import.meta.env.MODE);
 
 interface ApiResponse<T> {
   data?: T;
@@ -68,6 +68,9 @@ class ApiClient {
 
   // Authentication
   async login(email: string, password: string) {
+    console.log('Attempting login to:', `${this.baseUrl}/api/auth/login`);
+    console.log('Login data:', { email, password: '***' });
+    
     return this.request<{ token: string; user: any }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),

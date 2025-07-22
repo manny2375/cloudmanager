@@ -50,6 +50,17 @@ export class CloudflareWorkerService {
         });
       }
 
+      // Test endpoint
+      if (path === '/test') {
+        return new Response(JSON.stringify({ 
+          message: 'Worker is running!', 
+          timestamp: new Date().toISOString(),
+          environment: this.env.ENVIRONMENT || 'unknown'
+        }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
       // API routes
       if (path.startsWith('/api/')) {
         const response = await this.handleAPIRequest(request, path, method);

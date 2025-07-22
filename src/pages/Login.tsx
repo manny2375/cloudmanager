@@ -18,8 +18,13 @@ export default function Login({ onLogin }: LoginProps) {
     setIsLoading(true);
     setError('');
 
+    console.log('Login attempt:', { email, password: '***' });
+    console.log('API URL:', import.meta.env.VITE_API_URL);
+
     try {
       const result = await apiClient.login(email, password);
+      console.log('Login result:', { success: !result.error, error: result.error });
+      
       if (result.error) {
         throw new Error(result.error);
       }
