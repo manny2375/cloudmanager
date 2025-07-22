@@ -51,6 +51,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
   const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'aws' | 'azure' | 'proxmox'>('aws');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     aws_secret: false,
     azure_secret: false,
@@ -167,6 +168,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                 <BarChart3 className="w-5 h-5" />
               </button>
               <button
+                onClick={() => setShowSettingsModal(true)}
                 className={`p-2 rounded-md ${
                   darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
                 }`}
@@ -664,6 +666,202 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                 ) : (
                   'Save Credentials'
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
+            {/* Modal Header */}
+            <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Settings</h3>
+                <button
+                  onClick={() => setShowSettingsModal(false)}
+                  className={`p-2 rounded-md ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-6 py-6">
+              {/* General Settings */}
+              <div className="mb-8">
+                <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                  General Settings
+                </h4>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Dark Mode
+                      </label>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Toggle between light and dark theme
+                      </p>
+                    </div>
+                    <button
+                      onClick={onToggleDarkMode}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        darkMode ? 'bg-blue-600' : 'bg-gray-200'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          darkMode ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Auto-refresh Dashboard
+                      </label>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Automatically refresh VM status every 30 seconds
+                      </p>
+                    </div>
+                    <button
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors bg-blue-600`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6`} />
+                    </button>
+              {/* Notification Settings */}
+              <div className="mb-8">
+                <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                  Notifications
+                </h4>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        VM Status Alerts
+                      </label>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Get notified when VMs go offline or encounter errors
+                      </p>
+                    </div>
+                    <button
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors bg-blue-600`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-6`} />
+                    </button>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <label className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                        Cost Alerts
+                      </label>
+                      <p className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        Alert when monthly costs exceed budget thresholds
+                      </p>
+                    </div>
+                    <button
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors bg-gray-200`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform translate-x-1`} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+                  </div>
+              {/* Data & Privacy */}
+              <div className="mb-8">
+                <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                  Data & Privacy
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Data Retention Period
+                    </label>
+                    <select className={`w-full px-3 py-2 border rounded-md ${
+                      darkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}>
+                      <option value="30">30 days</option>
+                      <option value="90" selected>90 days</option>
+                      <option value="180">180 days</option>
+                      <option value="365">1 year</option>
+                    </select>
+                    <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      How long to keep logs and metrics data
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Export Data
+                    </label>
+                    <button className={`px-4 py-2 text-sm border rounded-md ${
+                      darkMode 
+                        ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                        : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                    }`}>
+                      Download All Data
+                    </button>
+                    <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                      Export all your data in JSON format
+                    </p>
+                  </div>
+                </div>
+              </div>
+                </div>
+              {/* Account Settings */}
+              <div>
+                <h4 className={`text-md font-medium mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-800'}`}>
+                  Account
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Change Password
+                    </label>
+                    <button className={`px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700`}>
+                      Update Password
+                    </button>
+                  </div>
+                  
+                  <div className={`p-4 rounded-md ${darkMode ? 'bg-red-900 border border-red-700' : 'bg-red-50 border border-red-200'}`}>
+                    <h5 className={`text-sm font-medium ${darkMode ? 'text-red-100' : 'text-red-800'} mb-2`}>
+                      Danger Zone
+                    </h5>
+                    <p className={`text-sm ${darkMode ? 'text-red-200' : 'text-red-700'} mb-3`}>
+                      These actions cannot be undone. Please be careful.
+                    </p>
+                    <button className={`px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700`}>
+                      Delete Account
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+              </div>
+            {/* Modal Footer */}
+            <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-end space-x-3`}>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                  darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'
+                } border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+              >
+                Save Changes
               </button>
             </div>
           </div>
