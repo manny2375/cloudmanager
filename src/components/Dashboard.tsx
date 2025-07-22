@@ -61,6 +61,179 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
     proxmox_password: false
   });
 
+  const [newVmData, setNewVmData] = useState({
+    name: '',
+    provider: '',
+    instanceType: '',
+    operatingSystem: '',
+    cpu: 1,
+    memory: 1,
+    storage: 20,
+    region: '',
+    securityGroup: ''
+  });
+  const [selectedPresetType, setSelectedPresetType] = useState('');
+  const [selectedPresetConfig, setSelectedPresetConfig] = useState<any>(null);
+  const [vmMode, setVmMode] = useState<'preset' | 'custom'>('preset');
+
+  // Get preset configurations based on provider and type
+  const getPresetConfigurations = (provider: string, type: string) => {
+    const configurations: Record<string, Record<string, any[]>> = {
+      aws: {
+        'web-server': [
+          { name: 'Basic Web Server', instanceType: 't3.micro', cpu: 1, memory: 1, storage: 20, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0104 },
+          { name: 'Standard Web Server', instanceType: 't3.small', cpu: 2, memory: 2, storage: 30, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0208 },
+          { name: 'High Traffic Web Server', instanceType: 't3.medium', cpu: 2, memory: 4, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0416 },
+          { name: 'Enterprise Web Server', instanceType: 't3.large', cpu: 2, memory: 8, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0832 },
+          { name: 'Load Balanced Web Server', instanceType: 't3.xlarge', cpu: 4, memory: 16, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.1664 },
+          { name: 'CDN Web Server', instanceType: 't3.2xlarge', cpu: 8, memory: 32, storage: 300, os: 'Ubuntu 22.04 LTS', costPerHour: 0.3328 }
+        ],
+        'database-server': [
+          { name: 'MySQL Basic', instanceType: 't3.small', cpu: 2, memory: 2, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0208 },
+          { name: 'PostgreSQL Standard', instanceType: 't3.medium', cpu: 2, memory: 4, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0416 },
+          { name: 'MongoDB Replica', instanceType: 't3.large', cpu: 2, memory: 8, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0832 },
+          { name: 'Redis Cache Server', instanceType: 'r5.large', cpu: 2, memory: 16, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.126 },
+          { name: 'Oracle Enterprise', instanceType: 'r5.xlarge', cpu: 4, memory: 32, storage: 500, os: 'Oracle Linux 8', costPerHour: 0.252 },
+          { name: 'SQL Server Cluster', instanceType: 'r5.2xlarge', cpu: 8, memory: 64, storage: 1000, os: 'Windows Server 2022', costPerHour: 0.504 }
+        ],
+        'application-server': [
+          { name: 'Node.js App Server', instanceType: 't3.medium', cpu: 2, memory: 4, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0416 },
+          { name: 'Java Spring Boot', instanceType: 't3.large', cpu: 2, memory: 8, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0832 },
+          { name: 'Python Django', instanceType: 't3.xlarge', cpu: 4, memory: 16, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.1664 },
+          { name: '.NET Core Server', instanceType: 't3.large', cpu: 2, memory: 8, storage: 100, os: 'Windows Server 2022', costPerHour: 0.0936 },
+          { name: 'Microservices Cluster', instanceType: 'c5.xlarge', cpu: 4, memory: 8, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.17 },
+          { name: 'High Performance API', instanceType: 'c5.2xlarge', cpu: 8, memory: 16, storage: 300, os: 'Ubuntu 22.04 LTS', costPerHour: 0.34 }
+        ],
+        'windows-desktop': [
+          { name: 'Basic Windows Desktop', instanceType: 't3.medium', cpu: 2, memory: 4, storage: 100, os: 'Windows Server 2022', costPerHour: 0.052 },
+          { name: 'Developer Workstation', instanceType: 't3.large', cpu: 2, memory: 8, storage: 200, os: 'Windows 11 Pro', costPerHour: 0.0936 },
+          { name: 'Design Workstation', instanceType: 'm5.xlarge', cpu: 4, memory: 16, storage: 300, os: 'Windows 11 Pro', costPerHour: 0.192 },
+          { name: 'CAD Workstation', instanceType: 'g4dn.xlarge', cpu: 4, memory: 16, storage: 500, os: 'Windows 11 Pro', costPerHour: 0.526 },
+          { name: 'Gaming Server', instanceType: 'g4dn.2xlarge', cpu: 8, memory: 32, storage: 1000, os: 'Windows Server 2022', costPerHour: 0.752 },
+          { name: 'Virtual Desktop Pool', instanceType: 'm5.2xlarge', cpu: 8, memory: 32, storage: 200, os: 'Windows Server 2022', costPerHour: 0.384 }
+        ],
+        'development-environment': [
+          { name: 'Basic Dev Environment', instanceType: 't3.micro', cpu: 1, memory: 1, storage: 30, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0104 },
+          { name: 'Full Stack Dev', instanceType: 't3.small', cpu: 2, memory: 2, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0208 },
+          { name: 'Docker Development', instanceType: 't3.medium', cpu: 2, memory: 4, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0416 },
+          { name: 'Kubernetes Dev Cluster', instanceType: 't3.large', cpu: 2, memory: 8, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0832 },
+          { name: 'CI/CD Pipeline Server', instanceType: 'c5.large', cpu: 2, memory: 4, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.085 },
+          { name: 'Multi-Language IDE', instanceType: 'm5.large', cpu: 2, memory: 8, storage: 150, os: 'Ubuntu 22.04 LTS', costPerHour: 0.096 }
+        ],
+        'ml-workstation': [
+          { name: 'Basic ML Training', instanceType: 'p3.2xlarge', cpu: 8, memory: 61, storage: 500, os: 'Ubuntu 22.04 LTS', costPerHour: 3.06 },
+          { name: 'Deep Learning GPU', instanceType: 'p3.8xlarge', cpu: 32, memory: 244, storage: 1000, os: 'Ubuntu 22.04 LTS', costPerHour: 12.24 },
+          { name: 'AI Research Station', instanceType: 'p4d.24xlarge', cpu: 96, memory: 1152, storage: 2000, os: 'Ubuntu 22.04 LTS', costPerHour: 32.77 },
+          { name: 'Data Science Notebook', instanceType: 'm5.xlarge', cpu: 4, memory: 16, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.192 },
+          { name: 'TensorFlow Cluster', instanceType: 'p3.16xlarge', cpu: 64, memory: 488, storage: 2000, os: 'Ubuntu 22.04 LTS', costPerHour: 24.48 },
+          { name: 'PyTorch Workstation', instanceType: 'g4dn.12xlarge', cpu: 48, memory: 192, storage: 1000, os: 'Ubuntu 22.04 LTS', costPerHour: 3.912 }
+        ]
+      },
+      azure: {
+        'web-server': [
+          { name: 'Basic Web Server', instanceType: 'Standard_B1s', cpu: 1, memory: 1, storage: 20, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0104 },
+          { name: 'Standard Web Server', instanceType: 'Standard_B2s', cpu: 2, memory: 4, storage: 30, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0416 },
+          { name: 'High Traffic Web Server', instanceType: 'Standard_D2s_v3', cpu: 2, memory: 8, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.096 },
+          { name: 'Enterprise Web Server', instanceType: 'Standard_D4s_v3', cpu: 4, memory: 16, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.192 },
+          { name: 'Load Balanced Web Server', instanceType: 'Standard_D8s_v3', cpu: 8, memory: 32, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.384 },
+          { name: 'CDN Web Server', instanceType: 'Standard_D16s_v3', cpu: 16, memory: 64, storage: 300, os: 'Ubuntu 22.04 LTS', costPerHour: 0.768 }
+        ],
+        'database-server': [
+          { name: 'MySQL Basic', instanceType: 'Standard_B2ms', cpu: 2, memory: 8, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0832 },
+          { name: 'PostgreSQL Standard', instanceType: 'Standard_D2s_v3', cpu: 2, memory: 8, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.096 },
+          { name: 'MongoDB Replica', instanceType: 'Standard_D4s_v3', cpu: 4, memory: 16, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.192 },
+          { name: 'Redis Cache Server', instanceType: 'Standard_E2s_v3', cpu: 2, memory: 16, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.126 },
+          { name: 'SQL Server Enterprise', instanceType: 'Standard_E4s_v3', cpu: 4, memory: 32, storage: 500, os: 'Windows Server 2022', costPerHour: 0.252 },
+          { name: 'Cosmos DB Cluster', instanceType: 'Standard_E8s_v3', cpu: 8, memory: 64, storage: 1000, os: 'Ubuntu 22.04 LTS', costPerHour: 0.504 }
+        ],
+        'application-server': [
+          { name: 'Node.js App Server', instanceType: 'Standard_B2s', cpu: 2, memory: 4, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0416 },
+          { name: 'Java Spring Boot', instanceType: 'Standard_D2s_v3', cpu: 2, memory: 8, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.096 },
+          { name: 'Python Django', instanceType: 'Standard_D4s_v3', cpu: 4, memory: 16, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.192 },
+          { name: '.NET Core Server', instanceType: 'Standard_D2s_v3', cpu: 2, memory: 8, storage: 100, os: 'Windows Server 2022', costPerHour: 0.108 },
+          { name: 'Microservices Cluster', instanceType: 'Standard_F4s_v2', cpu: 4, memory: 8, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.169 },
+          { name: 'High Performance API', instanceType: 'Standard_F8s_v2', cpu: 8, memory: 16, storage: 300, os: 'Ubuntu 22.04 LTS', costPerHour: 0.338 }
+        ],
+        'windows-desktop': [
+          { name: 'Basic Windows Desktop', instanceType: 'Standard_B2s', cpu: 2, memory: 4, storage: 100, os: 'Windows Server 2022', costPerHour: 0.0624 },
+          { name: 'Developer Workstation', instanceType: 'Standard_D2s_v3', cpu: 2, memory: 8, storage: 200, os: 'Windows 11 Pro', costPerHour: 0.108 },
+          { name: 'Design Workstation', instanceType: 'Standard_D4s_v3', cpu: 4, memory: 16, storage: 300, os: 'Windows 11 Pro', costPerHour: 0.216 },
+          { name: 'CAD Workstation', instanceType: 'Standard_NV6', cpu: 6, memory: 56, storage: 500, os: 'Windows 11 Pro', costPerHour: 1.14 },
+          { name: 'Gaming Server', instanceType: 'Standard_NV12', cpu: 12, memory: 112, storage: 1000, os: 'Windows Server 2022', costPerHour: 2.28 },
+          { name: 'Virtual Desktop Pool', instanceType: 'Standard_D8s_v3', cpu: 8, memory: 32, storage: 200, os: 'Windows Server 2022', costPerHour: 0.432 }
+        ],
+        'development-environment': [
+          { name: 'Basic Dev Environment', instanceType: 'Standard_B1s', cpu: 1, memory: 1, storage: 30, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0104 },
+          { name: 'Full Stack Dev', instanceType: 'Standard_B2s', cpu: 2, memory: 4, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.0416 },
+          { name: 'Docker Development', instanceType: 'Standard_D2s_v3', cpu: 2, memory: 8, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.096 },
+          { name: 'Kubernetes Dev Cluster', instanceType: 'Standard_D4s_v3', cpu: 4, memory: 16, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.192 },
+          { name: 'CI/CD Pipeline Server', instanceType: 'Standard_F2s_v2', cpu: 2, memory: 4, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.085 },
+          { name: 'Multi-Language IDE', instanceType: 'Standard_E2s_v3', cpu: 2, memory: 16, storage: 150, os: 'Ubuntu 22.04 LTS', costPerHour: 0.126 }
+        ],
+        'ml-workstation': [
+          { name: 'Basic ML Training', instanceType: 'Standard_NC6s_v3', cpu: 6, memory: 112, storage: 500, os: 'Ubuntu 22.04 LTS', costPerHour: 3.06 },
+          { name: 'Deep Learning GPU', instanceType: 'Standard_NC24s_v3', cpu: 24, memory: 448, storage: 1000, os: 'Ubuntu 22.04 LTS', costPerHour: 12.24 },
+          { name: 'AI Research Station', instanceType: 'Standard_ND40rs_v2', cpu: 40, memory: 672, storage: 2000, os: 'Ubuntu 22.04 LTS', costPerHour: 22.32 },
+          { name: 'Data Science Notebook', instanceType: 'Standard_D4s_v3', cpu: 4, memory: 16, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.192 },
+          { name: 'TensorFlow Cluster', instanceType: 'Standard_NC24rs_v3', cpu: 24, memory: 448, storage: 2000, os: 'Ubuntu 22.04 LTS', costPerHour: 13.20 },
+          { name: 'PyTorch Workstation', instanceType: 'Standard_NC12s_v3', cpu: 12, memory: 224, storage: 1000, os: 'Ubuntu 22.04 LTS', costPerHour: 6.12 }
+        ]
+      },
+      proxmox: {
+        'web-server': [
+          { name: 'Basic Web Server', instanceType: 'web-basic', cpu: 1, memory: 2, storage: 20, os: 'Ubuntu 22.04 LTS', costPerHour: 0.005 },
+          { name: 'Standard Web Server', instanceType: 'web-standard', cpu: 2, memory: 4, storage: 40, os: 'Ubuntu 22.04 LTS', costPerHour: 0.010 },
+          { name: 'High Traffic Web Server', instanceType: 'web-performance', cpu: 4, memory: 8, storage: 80, os: 'Ubuntu 22.04 LTS', costPerHour: 0.020 },
+          { name: 'Enterprise Web Server', instanceType: 'web-enterprise', cpu: 8, memory: 16, storage: 160, os: 'Ubuntu 22.04 LTS', costPerHour: 0.040 },
+          { name: 'Load Balanced Web Server', instanceType: 'web-cluster', cpu: 6, memory: 12, storage: 120, os: 'Ubuntu 22.04 LTS', costPerHour: 0.030 },
+          { name: 'CDN Web Server', instanceType: 'web-cdn', cpu: 4, memory: 8, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.025 }
+        ],
+        'database-server': [
+          { name: 'MySQL Basic', instanceType: 'db-mysql-basic', cpu: 2, memory: 4, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.012 },
+          { name: 'PostgreSQL Standard', instanceType: 'db-postgres-std', cpu: 4, memory: 8, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.024 },
+          { name: 'MongoDB Replica', instanceType: 'db-mongo-replica', cpu: 6, memory: 12, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.036 },
+          { name: 'Redis Cache Server', instanceType: 'db-redis-cache', cpu: 2, memory: 16, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.020 },
+          { name: 'MariaDB Cluster', instanceType: 'db-mariadb-cluster', cpu: 8, memory: 32, storage: 500, os: 'Ubuntu 22.04 LTS', costPerHour: 0.048 },
+          { name: 'InfluxDB Time Series', instanceType: 'db-influx-ts', cpu: 4, memory: 16, storage: 300, os: 'Ubuntu 22.04 LTS', costPerHour: 0.032 }
+        ],
+        'application-server': [
+          { name: 'Node.js App Server', instanceType: 'app-nodejs', cpu: 2, memory: 4, storage: 40, os: 'Ubuntu 22.04 LTS', costPerHour: 0.012 },
+          { name: 'Java Spring Boot', instanceType: 'app-java-spring', cpu: 4, memory: 8, storage: 80, os: 'Ubuntu 22.04 LTS', costPerHour: 0.024 },
+          { name: 'Python Django', instanceType: 'app-python-django', cpu: 4, memory: 8, storage: 80, os: 'Ubuntu 22.04 LTS', costPerHour: 0.024 },
+          { name: 'PHP Laravel', instanceType: 'app-php-laravel', cpu: 2, memory: 4, storage: 60, os: 'Ubuntu 22.04 LTS', costPerHour: 0.012 },
+          { name: 'Docker Container Host', instanceType: 'app-docker-host', cpu: 6, memory: 16, storage: 120, os: 'Ubuntu 22.04 LTS', costPerHour: 0.036 },
+          { name: 'Kubernetes Node', instanceType: 'app-k8s-node', cpu: 8, memory: 32, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.048 }
+        ],
+        'windows-desktop': [
+          { name: 'Basic Windows Desktop', instanceType: 'win-basic', cpu: 2, memory: 4, storage: 80, os: 'Windows Server 2022', costPerHour: 0.015 },
+          { name: 'Developer Workstation', instanceType: 'win-dev', cpu: 4, memory: 8, storage: 120, os: 'Windows 11 Pro', costPerHour: 0.030 },
+          { name: 'Design Workstation', instanceType: 'win-design', cpu: 6, memory: 16, storage: 200, os: 'Windows 11 Pro', costPerHour: 0.045 },
+          { name: 'CAD Workstation', instanceType: 'win-cad', cpu: 8, memory: 32, storage: 300, os: 'Windows 11 Pro', costPerHour: 0.060 },
+          { name: 'Terminal Server', instanceType: 'win-terminal', cpu: 8, memory: 16, storage: 150, os: 'Windows Server 2022', costPerHour: 0.048 },
+          { name: 'File Server', instanceType: 'win-fileserver', cpu: 4, memory: 8, storage: 500, os: 'Windows Server 2022', costPerHour: 0.035 }
+        ],
+        'development-environment': [
+          { name: 'Basic Dev Environment', instanceType: 'dev-basic', cpu: 1, memory: 2, storage: 30, os: 'Ubuntu 22.04 LTS', costPerHour: 0.005 },
+          { name: 'Full Stack Dev', instanceType: 'dev-fullstack', cpu: 2, memory: 4, storage: 60, os: 'Ubuntu 22.04 LTS', costPerHour: 0.010 },
+          { name: 'Docker Development', instanceType: 'dev-docker', cpu: 4, memory: 8, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.020 },
+          { name: 'GitLab Runner', instanceType: 'dev-gitlab', cpu: 2, memory: 4, storage: 50, os: 'Ubuntu 22.04 LTS', costPerHour: 0.012 },
+          { name: 'Jenkins CI/CD', instanceType: 'dev-jenkins', cpu: 4, memory: 8, storage: 80, os: 'Ubuntu 22.04 LTS', costPerHour: 0.024 },
+          { name: 'Code Server IDE', instanceType: 'dev-codeserver', cpu: 2, memory: 8, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.016 }
+        ],
+        'ml-workstation': [
+          { name: 'Basic ML Training', instanceType: 'ml-basic', cpu: 8, memory: 32, storage: 200, os: 'Ubuntu 22.04 LTS', costPerHour: 0.080 },
+          { name: 'GPU ML Workstation', instanceType: 'ml-gpu', cpu: 12, memory: 64, storage: 500, os: 'Ubuntu 22.04 LTS', costPerHour: 0.150 },
+          { name: 'Data Science Lab', instanceType: 'ml-datascience', cpu: 16, memory: 128, storage: 1000, os: 'Ubuntu 22.04 LTS', costPerHour: 0.200 },
+          { name: 'Jupyter Notebook Server', instanceType: 'ml-jupyter', cpu: 4, memory: 16, storage: 100, os: 'Ubuntu 22.04 LTS', costPerHour: 0.032 },
+          { name: 'TensorFlow Training', instanceType: 'ml-tensorflow', cpu: 16, memory: 64, storage: 500, os: 'Ubuntu 22.04 LTS', costPerHour: 0.128 },
+          { name: 'PyTorch Research', instanceType: 'ml-pytorch', cpu: 12, memory: 48, storage: 300, os: 'Ubuntu 22.04 LTS', costPerHour: 0.096 }
+        ]
+      }
+    };
+
+    return configurations[provider]?.[type] || [];
+  };
+
   // Preset VM configurations
   const presetVMs = [
     {
@@ -184,44 +357,56 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
     setShowCredentialsModal(false);
   };
 
-  const handleCreateVM = async (vmData: any) => {
+  const handleCreateVM = async () => {
     setIsCreatingVM(true);
     
     try {
-      let vmDataToSubmit = vmData;
+      let vmDataToSend;
       
-      // If using preset mode, use the selected preset data
-      if (vmConfigMode === 'preset' && selectedPreset) {
-        const preset = presetVMs.find(p => p.id === selectedPreset);
-        if (preset) {
-          vmDataToSubmit = {
-            name: vmData.name || preset.name,
-            provider: preset.provider,
-            instanceType: preset.instanceType,
-            os: preset.os,
-            cpuCores: preset.cpuCores,
-            memory: preset.memory,
-            storage: preset.storage,
-            region: vmData.region,
-            securityGroup: vmData.securityGroup
-          };
+      if (vmMode === 'preset') {
+        if (!selectedPresetConfig || !newVmData.provider || !newVmData.name) {
+          throw new Error('Please fill in all required fields');
         }
+        
+        vmDataToSend = {
+          name: newVmData.name,
+          provider: newVmData.provider,
+          instanceType: selectedPresetConfig.instanceType,
+          operatingSystem: selectedPresetConfig.os,
+          cpu: selectedPresetConfig.cpu,
+          memory: selectedPresetConfig.memory,
+          storage: selectedPresetConfig.storage,
+          region: newVmData.region,
+          securityGroup: newVmData.securityGroup,
+          costPerHour: selectedPresetConfig.costPerHour
+        };
+      } else {
+        if (!newVmData.name || !newVmData.provider) {
+          throw new Error('Please fill in all required fields');
+        }
+        
+        vmDataToSend = { ...newVmData };
       }
       
-      const result = await apiClient.createVM(vmDataToSubmit);
+      const result = await apiClient.createVM(vmDataToSend);
       if (result.error) {
         throw new Error(result.error);
       }
       
-      // Refresh VMs list
+      setShowNewVMModal(false);
+      setNewVmData({
+        name: '', provider: '', instanceType: '', operatingSystem: '',
+        cpu: 1, memory: 1, storage: 20, region: '', securityGroup: ''
+      });
+      setSelectedPresetType('');
+      setSelectedPresetConfig(null);
+      setVmMode('preset');
+      
+      // Refresh VM list
       const vmsResult = await apiClient.getVMs();
       if (!vmsResult.error) {
         setVms(vmsResult.data || []);
       }
-      
-      setShowNewVMModal(false);
-      setVmConfigMode('preset');
-      setSelectedPreset('');
     } catch (error) {
       console.error('Failed to create VM:', error);
       // TODO: Show error message to user
@@ -1083,92 +1268,172 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
               handleCreateVM(vmData);
             }}>
               <div className="p-6 space-y-6 max-h-[500px] overflow-y-auto">
-                {vmConfigMode === 'preset' ? (
-                  // Preset VM Selection
-                  <div className="space-y-4">
+                {/* Mode Toggle */}
+                <div className="flex space-x-1 mb-6">
+                  <button
+                    type="button"
+                    onClick={() => setVmMode('preset')}
+                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                      vmMode === 'preset'
+                        ? 'bg-blue-600 text-white'
+                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Preset Configuration
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setVmMode('custom')}
+                    className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
+                      vmMode === 'custom'
+                        ? 'bg-blue-600 text-white'
+                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Custom Configuration
+                  </button>
+                </div>
+
+                {vmMode === 'preset' ? (
+                  <div className="space-y-6">
+                    {/* Cloud Provider Selection */}
                     <div>
-                      <label className="block text-sm font-medium mb-2">
-                        Choose a Preset Configuration
+                      <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                        Cloud Provider *
                       </label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {presetVMs.map((preset) => (
-                          <div
-                            key={preset.id}
-                            onClick={() => setSelectedPreset(preset.id)}
-                            className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                              selectedPreset === preset.id
-                                ? darkMode
-                                  ? 'border-blue-500 bg-blue-900/20'
-                                  : 'border-blue-500 bg-blue-50'
-                                : darkMode
-                                  ? 'border-gray-600 bg-gray-700 hover:border-gray-500'
-                                  : 'border-gray-200 bg-white hover:border-gray-300'
-                            }`}
-                          >
-                            <div className="flex items-start space-x-3">
-                              <div className="text-2xl">{preset.icon}</div>
-                              <div className="flex-1">
-                                <h4 className="font-medium text-sm">{preset.name}</h4>
-                                <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                                  {preset.description}
-                                </p>
-                                <div className="flex items-center justify-between mt-2">
-                                  <div className="flex items-center space-x-2 text-xs">
-                                    <span className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                                      {preset.cpuCores} vCPU
-                                    </span>
-                                    <span className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                                      {preset.memory}GB RAM
-                                    </span>
-                                    <span className={`px-2 py-1 rounded ${darkMode ? 'bg-gray-600 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-                                      {preset.storage}GB
-                                    </span>
-                                  </div>
-                                  <div className="text-right">
-                                    <div className="text-xs font-medium text-green-600">
-                                      ${preset.costPerHour}/hr
-                                    </div>
-                                    <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                                      ~${(preset.costPerHour * 24 * 30).toFixed(0)}/mo
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+                      <select
+                        value={newVmData.provider}
+                        onChange={(e) => {
+                          setNewVmData({ ...newVmData, provider: e.target.value });
+                          setSelectedPresetType('');
+                          setSelectedPresetConfig(null);
+                        }}
+                        className={`w-full px-3 py-2 border rounded-md ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white' 
+                            : 'bg-white border-gray-300 text-gray-900'
+                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                        required
+                      >
+                        <option value="">Select Cloud Provider</option>
+                        <option value="aws">Amazon Web Services (AWS)</option>
+                        <option value="azure">Microsoft Azure</option>
+                        <option value="proxmox">Proxmox VE</option>
+                      </select>
                     </div>
 
-                    {/* Basic settings for preset */}
-                    {selectedPreset && (
+                    {/* Preset Type Selection */}
+                    {newVmData.provider && (
+                      <div>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                          Preset Configuration Type *
+                        </label>
+                        <select
+                          value={selectedPresetType}
+                          onChange={(e) => {
+                            setSelectedPresetType(e.target.value);
+                            setSelectedPresetConfig(null);
+                          }}
+                          className={`w-full px-3 py-2 border rounded-md ${
+                            darkMode 
+                              ? 'bg-gray-700 border-gray-600 text-white' 
+                              : 'bg-white border-gray-300 text-gray-900'
+                          } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                          required
+                        >
+                          <option value="">Choose Configuration Type</option>
+                          <option value="web-server">🌐 Web Server</option>
+                          <option value="database-server">🗄️ Database Server</option>
+                          <option value="application-server">⚡ Application Server</option>
+                          <option value="windows-desktop">🖥️ Windows Desktop</option>
+                          <option value="development-environment">💻 Development Environment</option>
+                          <option value="ml-workstation">🤖 ML Workstation</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Specific Preset Configurations */}
+                    {selectedPresetType && newVmData.provider && (
+                      <div>
+                        <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                          Available Configurations *
+                        </label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {getPresetConfigurations(newVmData.provider, selectedPresetType).map((config, index) => (
+                            <div
+                              key={index}
+                              onClick={() => setSelectedPresetConfig(config)}
+                              className={`p-4 border rounded-lg cursor-pointer transition-all ${
+                                selectedPresetConfig?.name === config.name
+                                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                                  : darkMode 
+                                    ? 'border-gray-600 bg-gray-700 hover:border-gray-500' 
+                                    : 'border-gray-300 bg-white hover:border-gray-400'
+                              }`}
+                            >
+                              <div className="flex justify-between items-start mb-2">
+                                <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                                  {config.name}
+                                </h4>
+                                <span className={`text-sm ${darkMode ? 'text-green-400' : 'text-green-600'}`}>
+                                  ${config.costPerHour}/hr
+                                </span>
+                              </div>
+                              <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'} space-y-1`}>
+                                <div>Instance: {config.instanceType}</div>
+                                <div>CPU: {config.cpu} vCPU | RAM: {config.memory}GB</div>
+                                <div>Storage: {config.storage}GB | OS: {config.os}</div>
+                              </div>
+                              <div className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                                Monthly: ~${(config.costPerHour * 24 * 30).toFixed(0)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Basic Configuration for Preset */}
+                    {selectedPresetConfig && (
                       <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                        <h4 className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                          Basic Configuration
+                        </h4>
+                        
+                        {/* VM Name */}
                         <div>
-                          <label className="block text-sm font-medium mb-2">
-                            VM Name (Optional - will use preset name if empty)
+                          <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                            VM Name *
                           </label>
                           <input
                             type="text"
-                            name="name"
-                            placeholder={presetVMs.find(p => p.id === selectedPreset)?.name}
+                            value={newVmData.name}
+                            onChange={(e) => setNewVmData({ ...newVmData, name: e.target.value })}
+                            placeholder={`my-${selectedPresetConfig.name.toLowerCase().replace(/\s+/g, '-')}`}
                             className={`w-full px-3 py-2 border rounded-md ${
                               darkMode 
-                                ? 'bg-gray-700 border-gray-600 text-white' 
-                                : 'bg-white border-gray-300 text-gray-900'
+                                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                                : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
                             } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                            required
                           />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        {/* Region and Security Group */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label className="block text-sm font-medium mb-2">Region</label>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                              Region *
+                            </label>
                             <select
-                              name="region"
+                              value={newVmData.region}
+                              onChange={(e) => setNewVmData({ ...newVmData, region: e.target.value })}
                               className={`w-full px-3 py-2 border rounded-md ${
                                 darkMode 
                                   ? 'bg-gray-700 border-gray-600 text-white' 
                                   : 'bg-white border-gray-300 text-gray-900'
                               } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                              required
                             >
                               <option value="">Select Region</option>
                               <option value="us-east-1">US East (N. Virginia)</option>
@@ -1179,9 +1444,12 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium mb-2">Security Group</label>
+                            <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>
+                              Security Group
+                            </label>
                             <select
-                              name="securityGroup"
+                              value={newVmData.securityGroup}
+                              onChange={(e) => setNewVmData({ ...newVmData, securityGroup: e.target.value })}
                               className={`w-full px-3 py-2 border rounded-md ${
                                 darkMode 
                                   ? 'bg-gray-700 border-gray-600 text-white' 
@@ -1451,10 +1719,11 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  disabled={isCreatingVM || (vmConfigMode === 'preset' ? !selectedPreset : false)}
+                  type="button"
+                  onClick={handleCreateVM}
+                  disabled={isCreatingVM || (vmMode === 'preset' ? !selectedPresetConfig : false)}
                   className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-                    isCreatingVM || (vmConfigMode === 'preset' ? !selectedPreset : false) ? 'opacity-75 cursor-not-allowed' : ''
+                    isCreatingVM || (vmMode === 'preset' ? !selectedPresetConfig : false) ? 'opacity-75 cursor-not-allowed' : ''
                   }`}
                 >
                   {isCreatingVM ? (
