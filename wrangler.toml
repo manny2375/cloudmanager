@@ -1,12 +1,29 @@
-name = "cloudmanager-frontend"
+# Backend Worker Configuration
+name = "cloudmanager"
+main = "src/worker/index.ts"
 compatibility_date = "2024-01-15"
 
-# Pages build configuration
-pages_build_output_dir = "dist"
+[vars]
+ENVIRONMENT = "production"
+JWT_SECRET = "your-super-secret-jwt-key-change-in-production-2024"
 
-# Environment variables for Pages
+[[d1_databases]]
+binding = "DB"
+database_name = "cloudmanager-db"
+database_id = "d5a88802-2ef8-4878-b882-97f8b2aa37af"
+
+# Production environment for the API worker
+[env.production]
+name = "cloudmanager"
+
 [env.production.vars]
-VITE_API_URL = "https://cloudmanager.lamado.workers.dev"
+ENVIRONMENT = "production"
+JWT_SECRET = "your-super-secret-jwt-key-change-in-production-2024"
 
-[env.preview.vars]
-VITE_API_URL = "https://cloudmanager.lamado.workers.dev"
+# Development environment
+[env.development]
+name = "cloudmanager-dev"
+
+[env.development.vars]
+ENVIRONMENT = "development"
+JWT_SECRET = "dev-jwt-secret-key"
