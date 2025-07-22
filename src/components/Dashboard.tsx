@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Cloud, 
   Server, 
@@ -60,7 +60,7 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
   const [selectedProvider, setSelectedProvider] = useState<'aws' | 'azure' | 'proxmox'>('aws');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
 
-  const [virtualMachines] = useState<VirtualMachine[]>([
+  const [virtualMachines, setVirtualMachines] = useState<VirtualMachine[]>([
     {
       id: '1',
       name: 'prod-web-01',
