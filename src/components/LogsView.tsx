@@ -13,7 +13,8 @@ import {
   Server,
   Monitor,
   Calendar,
-  Clock
+  Clock,
+  X
 } from 'lucide-react';
 import CloudMonitoringService, { LogEntry } from '../services/monitoring';
 
@@ -30,20 +31,47 @@ export default function LogsView({ darkMode, onClose }: LogsViewProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     const monitoring = CloudMonitoringService.getInstance();
     
-    // Get initial logs
-    setLogs(monitoring.getLogs());
+    // Get initial logs and start collecting from cloud providers
+    const initializeLogs = async () => {
+      setIsInitialLoad(true);
+      
+      // Force initial collection from all providers
+      await monitoring.collectMetrics();
+      
+      // Get all existing logs
+      const existingLogs = monitoring.getLogs();
+      setLogs(existingLogs);
+      
+      setIsInitialLoad(false);
+    };
+    
+    initializeLogs();
     
     // Subscribe to log updates
     const unsubscribe = monitoring.subscribe((newLogs) => {
       setLogs(newLogs);
     });
 
-    return () => unsubscribe();
-  }, []);
+    // Set up auto-refresh interval if enabled
+    let refreshInterval: NodeJS.Timeout | null = null;
+    
+    if (autoRefresh) {
+      refreshInterval = setInterval(async () => {
+        await monitoring.collectMetrics();
+      }, 30000); // Refresh every 30 seconds
+    }
+    return () => {
+      unsubscribe();
+      if (refreshInterval) {
+        clearInterval(refreshInterval);
+      }
+    };
+  }, [autoRefresh]);
 
   useEffect(() => {
     let filtered = logs;
@@ -73,8 +101,22 @@ export default function LogsView({ darkMode, onClose }: LogsViewProps) {
     setIsRefreshing(true);
     const monitoring = CloudMonitoringService.getInstance();
     
-    // Force collection of new logs
+    // Force collection of new logs from all cloud providers
     await monitoring.collectMetrics();
+    
+    // Also manually trigger log collection
+    try {
+      const [awsLogs, azureLogs, proxmoxLogs] = await Promise.all([
+        monitoring.getAWSLogs(),
+        monitoring.getAzureLogs(), 
+        monitoring.getProxmoxLogs()
+      ]);
+      
+      // Log the collection activity
+      monitoring.logEvent('info', `Collected ${awsLogs.length} AWS logs, ${azureLogs.length} Azure logs, ${proxmoxLogs.length} Proxmox logs`);
+    } catch (error) {
+      monitoring.logEvent('error', 'Failed to collect logs from cloud providers', { error: error instanceof Error ? error.message : 'Unknown error' });
+    }
     
     setTimeout(() => {
       setIsRefreshing(false);
@@ -91,6 +133,18 @@ export default function LogsView({ darkMode, onClose }: LogsViewProps) {
     linkElement.setAttribute('href', dataUri);
     linkElement.setAttribute('download', exportFileDefaultName);
     linkElement.click();
+  };
+
+  const getLogSourceStats = () => {
+    const stats = logs.reduce((acc, log) => {
+      acc[log.source] = (acc[log.source] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+    
+    return {
+      total: logs.length,
+      ...stats
+    };
   };
 
   const getLogIcon = (level: string) => {
@@ -140,6 +194,8 @@ export default function LogsView({ darkMode, onClose }: LogsViewProps) {
     }
   };
 
+  const sourceStats = getLogSourceStats();
+
   return (
     <div className={`h-full ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-white text-gray-900'}`}>
       {/* Header */}
@@ -148,11 +204,26 @@ export default function LogsView({ darkMode, onClose }: LogsViewProps) {
           <div className="flex items-center">
             <Activity className="w-6 h-6 mr-3 text-blue-500" />
             <h2 className="text-2xl font-semibold">System Logs</h2>
-            <span className={`ml-3 px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-              {filteredLogs.length} entries
-            </span>
+            <div className="ml-3 flex items-center space-x-2">
+              <span className={`px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+                {filteredLogs.length} entries
+              </span>
+              {isInitialLoad && (
+                <span className={`px-2 py-1 rounded-full text-xs ${darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'}`}>
+                  Loading...
+                </span>
+              )}
+            </div>
           </div>
           <div className="flex items-center space-x-2">
+            <button
+              onClick={onClose}
+              className={`flex items-center px-3 py-2 rounded-md ${
+                darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+              }`}
+            >
+              <X className="w-4 h-4" />
+            </button>
             <label className="flex items-center">
               <input
                 type="checkbox"
@@ -187,6 +258,23 @@ export default function LogsView({ darkMode, onClose }: LogsViewProps) {
 
       {/* Filters */}
       <div className={`p-4 border-b ${darkMode ? 'border-gray-700 bg-gray-800' : 'border-gray-200 bg-gray-50'}`}>
+        {/* Source Statistics */}
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium">Sources:</span>
+          <span className={`px-2 py-1 rounded text-xs ${darkMode ? 'bg-orange-900 text-orange-100' : 'bg-orange-100 text-orange-800'}`}>
+            AWS: {sourceStats.aws || 0}
+          </span>
+          <span className={`px-2 py-1 rounded text-xs ${darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'}`}>
+            Azure: {sourceStats.azure || 0}
+          </span>
+          <span className={`px-2 py-1 rounded text-xs ${darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'}`}>
+            Proxmox: {sourceStats.proxmox || 0}
+          </span>
+          <span className={`px-2 py-1 rounded text-xs ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+            App: {sourceStats.app || 0}
+          </span>
+        </div>
+        
         <div className="flex flex-wrap items-center gap-4">
           {/* Search */}
           <div className="flex-1 min-w-64">
