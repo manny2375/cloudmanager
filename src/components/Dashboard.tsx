@@ -149,6 +149,32 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                 <KeyRound className="w-5 h-5" />
               </button>
               <button
+                onClick={onViewLogs}
+                className={`p-2 rounded-md ${
+                  darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
+                }`}
+                title="System Logs"
+              >
+                <FileText className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onViewMetrics}
+                className={`p-2 rounded-md ${
+                  darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
+                }`}
+                title="Performance Metrics"
+              >
+                <BarChart3 className="w-5 h-5" />
+              </button>
+              <button
+                className={`p-2 rounded-md ${
+                  darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
+                }`}
+                title="Settings"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+              <button
                 onClick={onToggleDarkMode}
                 className={`p-2 rounded-md ${
                   darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
