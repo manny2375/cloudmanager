@@ -1,8 +1,7 @@
 // API client for communicating with Cloudflare Workers backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 
-  (import.meta.env.PROD 
-    ? 'https://api.yourdomain.com' // Your Workers API domain
-    : 'http://localhost:8787'); // Local development
+const API_BASE_URL = import.meta.env.PROD 
+  ? 'https://api.yourdomain.com' // Your Workers API domain
+  : 'http://localhost:8787'; // Local development
 
 interface ApiResponse<T> {
   data?: T;
