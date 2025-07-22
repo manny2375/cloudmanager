@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Monitor, Lock, Mail } from 'lucide-react';
-import apiClient from '../lib/api';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,17 +15,25 @@ export default function Login() {
     setError('');
 
     try {
-      const result = await apiClient.login(email, password);
+      // Mock authentication for development
+      // In production, this would connect to your Cloudflare Workers API
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API delay
       
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      if (result.data) {
-        apiClient.setToken(result.data.token);
+      // For demo purposes, accept any email/password combination
+      if (email && password) {
+        // Store mock token in localStorage
+        localStorage.setItem('auth_token', 'mock-jwt-token');
+        localStorage.setItem('user_data', JSON.stringify({
+          id: 'admin-user-id',
+          email: email,
+          role: 'admin',
+          first_name: 'System',
+          last_name: 'Administrator'
+        }));
+        
         navigate('/dashboard');
       } else {
-        throw new Error('Login failed');
+        throw new Error('Please enter both email and password');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
