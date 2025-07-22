@@ -1,7 +1,11 @@
 name = "cloudmanager"
 main = "src/worker/index.ts"
 compatibility_date = "2024-01-15"
-workers_dev = true
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
 
 [vars]
 ENVIRONMENT = "production"
@@ -15,6 +19,11 @@ database_id = "d5a88802-2ef8-4878-b882-97f8b2aa37af"
 # Production environment
 [env.production]
 name = "cloudmanager"
+
+[[env.production.assets]]
+directory = "./dist"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
 
 [[env.production.d1_databases]]
 binding = "DB"

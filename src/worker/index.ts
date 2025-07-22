@@ -1,4 +1,4 @@
-// Cloudflare Worker - Optimized React Application Server
+// Cloudflare Worker - Full React Application Server
 import { DatabaseService } from '../lib/database';
 import { AuthService } from '../lib/auth';
 
@@ -6,6 +6,7 @@ export interface Env {
   DB: D1Database;
   JWT_SECRET: string;
   ENVIRONMENT: string;
+  ASSETS: Fetcher;
 }
 
 export interface CloudflareRequest extends Request {
@@ -15,541 +16,6 @@ export interface CloudflareRequest extends Request {
     asn?: number;
   };
 }
-
-// Optimized HTML with external CDN resources
-const HTML_CONTENT = `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Cloud Manager</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/recharts@2.12.2/umd/Recharts.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: { extend: {} }
-      }
-    </script>
-    <style>
-      body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; }
-      .animate-spin { animation: spin 1s linear infinite; }
-      @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    </style>
-  </head>
-  <body>
-    <div id="root">
-      <div class="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div class="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-      </div>
-    </div>
-    <script>
-      const { useState, useEffect } = React;
-      
-      // Simple icon component
-      const Icon = ({ type, className = "w-6 h-6" }) => {
-        const icons = {
-          monitor: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' }, 
-            React.createElement('rect', { x: 2, y: 3, width: 20, height: 14, rx: 2, ry: 2 }),
-            React.createElement('line', { x1: 8, y1: 21, x2: 16, y2: 21 }),
-            React.createElement('line', { x1: 12, y1: 17, x2: 12, y2: 21 })
-          ),
-          mail: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('path', { d: 'M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z' }),
-            React.createElement('polyline', { points: '22,6 12,13 2,6' })
-          ),
-          lock: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('rect', { x: 3, y: 11, width: 18, height: 11, rx: 2, ry: 2 }),
-            React.createElement('circle', { cx: 12, cy: 16, r: 1 }),
-            React.createElement('path', { d: 'M7 11V7a5 5 0 0 1 10 0v4' })
-          ),
-          server: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('rect', { x: 2, y: 2, width: 20, height: 8, rx: 2, ry: 2 }),
-            React.createElement('rect', { x: 2, y: 14, width: 20, height: 8, rx: 2, ry: 2 }),
-            React.createElement('line', { x1: 6, y1: 6, x2: 6.01, y2: 6 }),
-            React.createElement('line', { x1: 6, y1: 18, x2: 6.01, y2: 18 })
-          ),
-          cloud: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('path', { d: 'M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z' })
-          ),
-          power: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('path', { d: 'M18.36 6.64a9 9 0 1 1-12.73 0' }),
-            React.createElement('line', { x1: 12, y1: 2, x2: 12, y2: 12 })
-          ),
-          database: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('ellipse', { cx: 12, cy: 5, rx: 9, ry: 3 }),
-            React.createElement('path', { d: 'M21 12c0 1.66-4 3-9 3s-9-1.34-9-3' }),
-            React.createElement('path', { d: 'M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5' })
-          ),
-          dollar: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('line', { x1: 12, y1: 1, x2: 12, y2: 23 }),
-            React.createElement('path', { d: 'M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6' })
-          ),
-          activity: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('polyline', { points: '22,12 18,12 15,21 9,3 6,12 2,12' })
-          ),
-          moon: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('path', { d: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' })
-          ),
-          settings: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('circle', { cx: 12, cy: 12, r: 3 }),
-            React.createElement('path', { d: 'M12 1v6m0 10v6m11-7h-6m-10 0H1m15.5-6.5l-4.24 4.24M7.76 7.76L3.52 3.52m12.96 12.96l-4.24-4.24M7.76 16.24L3.52 20.48' })
-          ),
-          refresh: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('polyline', { points: '23,4 23,10 17,10' }),
-            React.createElement('polyline', { points: '1,20 1,14 7,14' }),
-            React.createElement('path', { d: 'M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15' })
-          ),
-          plus: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('circle', { cx: 12, cy: 12, r: 10 }),
-            React.createElement('line', { x1: 12, y1: 8, x2: 12, y2: 16 }),
-            React.createElement('line', { x1: 8, y1: 12, x2: 16, y2: 12 })
-          ),
-          key: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
-            React.createElement('path', { d: 'M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z' }),
-            React.createElement('circle', { cx: 16.5, cy: 7.5, r: .5 })
-          )
-        };
-        return icons[type] || React.createElement('div');
-      };
-
-      // Login Component
-      function Login({ onLogin }) {
-        const [email, setEmail] = useState('');
-        const [password, setPassword] = useState('');
-        const [isLoading, setIsLoading] = useState(false);
-        const [error, setError] = useState('');
-
-        const handleSubmit = async (e) => {
-          e.preventDefault();
-          setIsLoading(true);
-          setError('');
-
-          try {
-            const response = await fetch('/api/auth/login', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email, password })
-            });
-
-            const data = await response.json();
-            
-            if (!response.ok) {
-              throw new Error(data.error || 'Login failed');
-            }
-            
-            if (data.token) {
-              localStorage.setItem('auth_token', data.token);
-              onLogin(data.token);
-            }
-          } catch (err) {
-            setError(err.message);
-          } finally {
-            setIsLoading(false);
-          }
-        };
-
-        return React.createElement('div', {
-          className: 'min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4'
-        }, 
-          React.createElement('div', { className: 'max-w-md w-full' },
-            React.createElement('div', { className: 'text-center mb-8' },
-              React.createElement('div', { className: 'flex justify-center mb-4' },
-                React.createElement(Icon, { type: 'monitor', className: 'h-12 w-12 text-blue-600' })
-              ),
-              React.createElement('h2', { className: 'text-3xl font-bold text-gray-900' }, 'Cloud Manager'),
-              React.createElement('p', { className: 'mt-2 text-gray-600' }, 'Sign in to your account')
-            ),
-            React.createElement('div', { className: 'bg-white shadow-xl rounded-lg p-8' },
-              React.createElement('form', { onSubmit: handleSubmit, className: 'space-y-6' },
-                React.createElement('div', {},
-                  React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Email address'),
-                  React.createElement('div', { className: 'mt-1 relative' },
-                    React.createElement('div', { className: 'absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none' },
-                      React.createElement(Icon, { type: 'mail', className: 'h-5 w-5 text-gray-400' })
-                    ),
-                    React.createElement('input', {
-                      type: 'email',
-                      required: true,
-                      value: email,
-                      onChange: (e) => setEmail(e.target.value),
-                      className: 'block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                      placeholder: 'Enter your email'
-                    })
-                  )
-                ),
-                React.createElement('div', {},
-                  React.createElement('label', { className: 'block text-sm font-medium text-gray-700' }, 'Password'),
-                  React.createElement('div', { className: 'mt-1 relative' },
-                    React.createElement('div', { className: 'absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none' },
-                      React.createElement(Icon, { type: 'lock', className: 'h-5 w-5 text-gray-400' })
-                    ),
-                    React.createElement('input', {
-                      type: 'password',
-                      required: true,
-                      value: password,
-                      onChange: (e) => setPassword(e.target.value),
-                      className: 'block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500',
-                      placeholder: 'Enter your password'
-                    })
-                  )
-                ),
-                error && React.createElement('div', {
-                  className: 'bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md text-sm'
-                }, error),
-                React.createElement('button', {
-                  type: 'submit',
-                  disabled: isLoading,
-                  className: 'w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-75'
-                }, isLoading ? 'Signing in...' : 'Sign in')
-              ),
-              React.createElement('div', { className: 'mt-6 text-center text-sm text-gray-600' },
-                'Email: lamado@cloudcorenow.com | Password: admin123'
-              )
-            )
-          )
-        );
-      }
-
-      // Dashboard Component
-      function Dashboard({ onLogout }) {
-        const [darkMode, setDarkMode] = useState(false);
-        const [selectedPlatform, setSelectedPlatform] = useState('all');
-        const [isNewVMModalOpen, setIsNewVMModalOpen] = useState(false);
-        const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
-        const virtualMachines = [
-          {
-            id: '1', name: 'prod-web-01', status: 'running', platform: 'aws',
-            type: 't3.medium', ip: '10.0.1.4', cpu: 2, memory: 4, storage: 50,
-            costPerHour: 0.0416, os: 'Amazon Linux 2'
-          },
-          {
-            id: '2', name: 'dev-db-01', status: 'stopped', platform: 'azure',
-            type: 'Standard_D2s_v3', ip: '10.0.2.5', cpu: 2, memory: 8, storage: 100,
-            costPerHour: 0.0912, os: 'Ubuntu'
-          },
-          {
-            id: '3', name: 'test-app-01', status: 'running', platform: 'proxmox',
-            type: 'custom', ip: '192.168.1.10', cpu: 4, memory: 16, storage: 200,
-            costPerHour: 0.0250, os: 'Debian'
-          }
-        ];
-
-        const filteredVMs = selectedPlatform === 'all' 
-          ? virtualMachines 
-          : virtualMachines.filter(vm => vm.platform === selectedPlatform);
-
-        const getTotalMonthlyCost = () => {
-          return filteredVMs
-            .filter(vm => vm.status === 'running')
-            .reduce((total, vm) => total + vm.costPerHour * 24 * 30, 0)
-            .toFixed(2);
-        };
-
-        const getStatusColor = (status) => {
-          switch (status) {
-            case 'running': return 'bg-green-100 text-green-800';
-            case 'stopped': return 'bg-gray-100 text-gray-800';
-            default: return 'bg-gray-100 text-gray-800';
-          }
-        };
-
-        const toggleDarkMode = () => {
-          setDarkMode(!darkMode);
-          document.documentElement.classList.toggle('dark');
-        };
-
-        const getPlatformIcon = (platform) => {
-          switch (platform) {
-            case 'aws': return React.createElement(Icon, { type: 'cloud', className: 'w-5 h-5 text-orange-500' });
-            case 'azure': return React.createElement(Icon, { type: 'cloud', className: 'w-5 h-5 text-blue-500' });
-            case 'proxmox': return React.createElement(Icon, { type: 'server', className: 'w-5 h-5 text-green-500' });
-            default: return React.createElement(Icon, { type: 'server', className: 'w-5 h-5' });
-          }
-        };
-
-        return React.createElement('div', { className: \`min-h-screen \${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}\` },
-          // Header
-          React.createElement('header', { className: darkMode ? 'bg-gray-800 shadow-sm' : 'bg-white shadow-sm' },
-            React.createElement('div', { className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4' },
-              React.createElement('div', { className: 'flex items-center justify-between' },
-                React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'monitor', className: \`h-8 w-8 \${darkMode ? 'text-blue-400' : 'text-blue-600'} mr-3\` }),
-                  React.createElement('h1', { className: 'text-2xl font-semibold' }, 'Cloud Manager')
-                ),
-                React.createElement('div', { className: 'flex items-center space-x-4' },
-                  React.createElement('button', {
-                    onClick: toggleDarkMode,
-                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
-                  }, darkMode ? 
-                    React.createElement(Icon, { type: 'sun', className: 'w-6 h-6 text-yellow-400' }) :
-                    React.createElement(Icon, { type: 'moon', className: 'w-6 h-6 text-gray-600' })
-                  ),
-                  React.createElement('button', {
-                    onClick: () => setIsSettingsOpen(true),
-                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
-                  }, React.createElement(Icon, { type: 'settings', className: \`w-6 h-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` })),
-                  React.createElement('button', {
-                    onClick: () => alert('Metrics view coming soon!'),
-                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
-                  }, React.createElement(Icon, { type: 'activity', className: \`w-6 h-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` })),
-                  React.createElement('button', {
-                    onClick: () => alert('Logs view coming soon!'),
-                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
-                  }, React.createElement(Icon, { type: 'database', className: \`w-6 h-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` })),
-                  React.createElement('button', {
-                    onClick: onLogout,
-                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
-                  }, React.createElement(Icon, { type: 'key', className: \`w-6 h-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }))
-                )
-              )
-            )
-          ),
-          
-          // Main Content
-          React.createElement('main', { className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8' },
-            // Stats Cards
-            React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-6 mb-8' },
-              React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6\` },
-                React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'server', className: \`w-8 h-8 \${darkMode ? 'text-blue-400' : 'text-blue-500'} mr-4\` }),
-                  React.createElement('div', {},
-                    React.createElement('p', { className: \`text-sm font-medium \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 'Total VMs'),
-                    React.createElement('p', { className: 'text-2xl font-semibold' }, virtualMachines.length)
-                  )
-                )
-              ),
-              React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6\` },
-                React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'power', className: \`w-8 h-8 \${darkMode ? 'text-green-400' : 'text-green-500'} mr-4\` }),
-                  React.createElement('div', {},
-                    React.createElement('p', { className: \`text-sm font-medium \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 'Running'),
-                    React.createElement('p', { className: 'text-2xl font-semibold' }, 
-                      filteredVMs.filter(vm => vm.status === 'running').length
-                    )
-                  )
-                )
-              ),
-              React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6\` },
-                React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'database', className: \`w-8 h-8 \${darkMode ? 'text-purple-400' : 'text-purple-500'} mr-4\` }),
-                  React.createElement('div', {},
-                    React.createElement('p', { className: \`text-sm font-medium \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 'Total Storage'),
-                    React.createElement('p', { className: 'text-2xl font-semibold' }, 
-                      filteredVMs.reduce((acc, vm) => acc + vm.storage, 0) + 'GB'
-                    )
-                  )
-                )
-              ),
-              React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6\` },
-                React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'dollar', className: \`w-8 h-8 \${darkMode ? 'text-emerald-400' : 'text-emerald-500'} mr-4\` }),
-                  React.createElement('div', {},
-                    React.createElement('p', { className: \`text-sm font-medium \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 'Monthly Cost'),
-                    React.createElement('p', { className: 'text-2xl font-semibold' }, '$' + getTotalMonthlyCost())
-                  )
-                )
-              )
-            ),
-            
-            // Controls
-            React.createElement('div', { className: 'flex justify-between items-center mb-6' },
-              React.createElement('div', { className: 'flex space-x-2' },
-                React.createElement('button', {
-                  onClick: () => setSelectedPlatform('all'),
-                  className: \`px-4 py-2 rounded-md \${
-                    selectedPlatform === 'all' 
-                      ? darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
-                      : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }\`
-                }, 'All Platforms'),
-                React.createElement('button', {
-                  onClick: () => setSelectedPlatform('aws'),
-                  className: \`px-4 py-2 rounded-md \${
-                    selectedPlatform === 'aws' 
-                      ? darkMode ? 'bg-orange-900 text-orange-100' : 'bg-orange-100 text-orange-800'
-                      : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }\`
-                }, 'AWS'),
-                React.createElement('button', {
-                  onClick: () => setSelectedPlatform('azure'),
-                  className: \`px-4 py-2 rounded-md \${
-                    selectedPlatform === 'azure' 
-                      ? darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
-                      : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }\`
-                }, 'Azure'),
-                React.createElement('button', {
-                  onClick: () => setSelectedPlatform('proxmox'),
-                  className: \`px-4 py-2 rounded-md \${
-                    selectedPlatform === 'proxmox' 
-                      ? darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'
-                      : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }\`
-                }, 'Proxmox')
-              ),
-              React.createElement('div', { className: 'flex space-x-2' },
-                React.createElement('button', {
-                  onClick: () => window.location.reload(),
-                  className: \`flex items-center px-4 py-2 rounded-md \${
-                    darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-                  }\`
-                },
-                  React.createElement(Icon, { type: 'refresh', className: 'w-4 h-4 mr-2' }),
-                  'Refresh'
-                ),
-                React.createElement('button', {
-                  onClick: () => setIsNewVMModalOpen(true),
-                  className: \`flex items-center px-4 py-2 text-white rounded-md \${
-                    darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'
-                  }\`
-                },
-                  React.createElement(Icon, { type: 'plus', className: 'w-4 h-4 mr-2' }),
-                  'New VM'
-                )
-              )
-            ),
-
-            // VM Table
-            React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} shadow rounded-lg overflow-hidden\` },
-              React.createElement('div', { className: 'overflow-x-auto' },
-                React.createElement('table', { className: 'min-w-full divide-y divide-gray-200' },
-                  React.createElement('thead', { className: darkMode ? 'bg-gray-700' : 'bg-gray-50' },
-                    React.createElement('tr', {},
-                      ['Name', 'Status', 'Platform', 'Type', 'OS', 'IP Address', 'Resources', 'Cost', 'Actions'].map(header =>
-                        React.createElement('th', {
-                          key: header,
-                          className: \`px-6 py-3 text-left text-xs font-medium \${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider\`
-                        }, header)
-                      )
-                    )
-                  ),
-                  React.createElement('tbody', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} divide-y \${darkMode ? 'divide-gray-700' : 'divide-gray-200'}\` },
-                    filteredVMs.map(vm =>
-                      React.createElement('tr', { key: vm.id, className: darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50' },
-                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
-                          React.createElement('div', { className: \`text-sm font-medium \${darkMode ? 'text-gray-100' : 'text-gray-900'}\` }, vm.name)
-                        ),
-                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
-                          React.createElement('span', { 
-                            className: \`px-2 inline-flex text-xs leading-5 font-semibold rounded-full \${getStatusColor(vm.status)}\`
-                          }, vm.status)
-                        ),
-                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
-                          React.createElement('div', { className: 'flex items-center' },
-                            getPlatformIcon(vm.platform),
-                            React.createElement('span', { className: \`ml-2 text-sm \${darkMode ? 'text-gray-100' : 'text-gray-900'}\` }, vm.platform.toUpperCase())
-                          )
-                        ),
-                        React.createElement('td', { className: \`px-6 py-4 whitespace-nowrap text-sm \${darkMode ? 'text-gray-300' : 'text-gray-500'}\` }, vm.type),
-                        React.createElement('td', { className: \`px-6 py-4 whitespace-nowrap text-sm \${darkMode ? 'text-gray-300' : 'text-gray-500'}\` }, vm.os),
-                        React.createElement('td', { className: \`px-6 py-4 whitespace-nowrap text-sm \${darkMode ? 'text-gray-300' : 'text-gray-500'}\` }, vm.ip),
-                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
-                          React.createElement('div', { className: \`text-sm \${darkMode ? 'text-gray-100' : 'text-gray-900'}\` }, 
-                            \`CPU:\${vm.cpu}C | RAM:\${vm.memory}G | HD:\${vm.storage}G\`
-                          )
-                        ),
-                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
-                          React.createElement('div', { className: 'text-sm' },
-                            React.createElement('div', { className: \`font-medium \${darkMode ? 'text-gray-100' : 'text-gray-900'}\` }, 
-                              \`$\${vm.costPerHour.toFixed(4)}/hr\`
-                            ),
-                            React.createElement('div', { className: darkMode ? 'text-gray-300' : 'text-gray-500' }, 
-                              \`$\${vm.status === 'stopped' ? '0.00' : (vm.costPerHour * 24 * 30).toFixed(2)}/mo\`
-                            )
-                          )
-                        ),
-                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-right text-sm font-medium' },
-                          React.createElement('div', { className: 'flex justify-end space-x-4' },
-                            React.createElement('button', {
-                              onClick: () => alert(\`\${vm.status === 'running' ? 'Stopping' : 'Starting'} \${vm.name}...\`),
-                              className: \`\${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-900'}\`
-                            }, vm.status === 'running' ? 'Stop' : 'Start'),
-                            React.createElement('button', {
-                              onClick: () => alert(\`Configuring \${vm.name}...\`),
-                              className: darkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-900'
-                            }, 'Configure'),
-                            React.createElement('button', {
-                              onClick: () => confirm(\`Delete \${vm.name}?\`) && alert(\`Deleting \${vm.name}...\`),
-                              className: darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-900'
-                            }, 'Delete')
-                          )
-                        )
-                      )
-                    )
-                  )
-                )
-              )
-            )
-          ),
-
-          // New VM Modal
-          isNewVMModalOpen && React.createElement('div', {
-            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50'
-          },
-            React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6\` },
-              React.createElement('h3', { className: 'text-xl font-semibold mb-4' }, 'Create New VM'),
-              React.createElement('p', { className: \`mb-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 
-                'VM creation feature coming soon!'
-              ),
-              React.createElement('div', { className: 'flex justify-end' },
-                React.createElement('button', {
-                  onClick: () => setIsNewVMModalOpen(false),
-                  className: \`px-4 py-2 rounded-md \${
-                    darkMode
-                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                  }\`
-                }, 'Close')
-              )
-            )
-          )
-        );
-      }
-
-      // Main App
-      function App() {
-        const [isAuthenticated, setIsAuthenticated] = useState(false);
-        const [isLoading, setIsLoading] = useState(true);
-
-        useEffect(() => {
-          const token = localStorage.getItem('auth_token');
-          if (token) {
-            setIsAuthenticated(true);
-          }
-          setIsLoading(false);
-        }, []);
-
-        const handleLogin = () => setIsAuthenticated(true);
-        const handleLogout = () => {
-          localStorage.removeItem('auth_token');
-          setIsAuthenticated(false);
-        };
-
-        if (isLoading) {
-          return React.createElement('div', {
-            className: 'min-h-screen bg-gray-50 flex items-center justify-center'
-          },
-            React.createElement('div', {
-              className: 'animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600'
-            })
-          );
-        }
-
-        return isAuthenticated 
-          ? React.createElement(Dashboard, { onLogout: handleLogout })
-          : React.createElement(Login, { onLogin: handleLogin });
-      }
-
-      // Render
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(App));
-    </script>
-  </body>
-</html>`;
 
 export class CloudflareWorkerService {
   private dbService: DatabaseService;
@@ -578,14 +44,13 @@ export class CloudflareWorkerService {
     }
 
     try {
-      // Serve static frontend for root path
-      if (path === '/' || path === '/index.html') {
-        return new Response(HTML_CONTENT, {
-          headers: { 
-            'Content-Type': 'text/html',
-            ...corsHeaders
-          }
+      // API routes
+      if (path.startsWith('/api/')) {
+        const response = await this.handleAPIRequest(request, path, method);
+        Object.entries(corsHeaders).forEach(([key, value]) => {
+          response.headers.set(key, value);
         });
+        return response;
       }
 
       // Health check
@@ -599,26 +64,14 @@ export class CloudflareWorkerService {
         });
       }
 
-      // API routes
-      if (path.startsWith('/api/')) {
-        const response = await this.handleAPIRequest(request, path, method);
-        Object.entries(corsHeaders).forEach(([key, value]) => {
-          response.headers.set(key, value);
-        });
-        return response;
+      // Serve static assets (React app)
+      if (this.env.ASSETS) {
+        return this.env.ASSETS.fetch(request);
       }
 
-      // Default 404
-      return new Response(
-        JSON.stringify({ error: 'Not found' }),
-        { 
-          status: 404, 
-          headers: { 
-            'Content-Type': 'application/json',
-            ...corsHeaders
-          } 
-        }
-      );
+      // Fallback for development or if ASSETS binding is not available
+      return new Response('Assets binding not available', { status: 500 });
+
     } catch (error) {
       console.error('Worker error:', error);
       return new Response(
@@ -640,10 +93,61 @@ export class CloudflareWorkerService {
       return await this.handleLogin(request);
     }
 
-    // Protected routes would go here
+    if (path === '/api/auth/register' && method === 'POST') {
+      return await this.handleRegister(request);
+    }
+
+    // Protected routes - verify JWT token
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.substring(7);
+    const payload = await this.verifyToken(token);
+    if (!payload) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid token' }),
+        { status: 401, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // VM management endpoints
+    if (path === '/api/vms' && method === 'GET') {
+      return await this.handleGetVMs(payload.userId);
+    }
+
+    if (path === '/api/vms' && method === 'POST') {
+      return await this.handleCreateVM(request, payload.userId);
+    }
+
+    if (path.startsWith('/api/vms/') && method === 'PUT') {
+      const vmId = path.split('/')[3];
+      return await this.handleUpdateVM(request, vmId, payload.userId);
+    }
+
+    if (path.startsWith('/api/vms/') && method === 'DELETE') {
+      const vmId = path.split('/')[3];
+      return await this.handleDeleteVM(vmId, payload.userId);
+    }
+
+    // Metrics endpoints
+    if (path.startsWith('/api/vms/') && path.endsWith('/metrics') && method === 'GET') {
+      const vmId = path.split('/')[3];
+      return await this.handleGetVMMetrics(vmId, payload.userId);
+    }
+
+    // Audit logs
+    if (path === '/api/audit-logs' && method === 'GET') {
+      return await this.handleGetAuditLogs(payload.userId);
+    }
+
     return new Response(
-      JSON.stringify({ error: 'Endpoint not implemented' }),
-      { status: 501, headers: { 'Content-Type': 'application/json' } }
+      JSON.stringify({ error: 'Endpoint not found' }),
+      { status: 404, headers: { 'Content-Type': 'application/json' } }
     );
   }
 
@@ -673,7 +177,7 @@ export class CloudflareWorkerService {
         );
       }
 
-      // Verify password with the corrected hash
+      // Verify password
       const isValidPassword = await this.verifyPassword(password, user.password_hash);
       console.log('Password verification result:', isValidPassword);
       
@@ -684,13 +188,12 @@ export class CloudflareWorkerService {
         );
       }
 
-      // Generate simple token
-      const token = `simple.${btoa(JSON.stringify({
+      // Generate JWT token
+      const token = await this.generateToken({
         userId: user.id,
         email: user.email,
-        role: user.role,
-        exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60)
-      }))}`;
+        role: user.role
+      });
       
       console.log('Login successful for user:', user.email);
       
@@ -716,6 +219,144 @@ export class CloudflareWorkerService {
     }
   }
 
+  private async handleRegister(request: CloudflareRequest): Promise<Response> {
+    try {
+      const userData = await request.json();
+      const result = await this.authService.registerUser(userData);
+      
+      if (!result.success) {
+        return new Response(
+          JSON.stringify({ error: result.error }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const token = await this.generateToken({
+        userId: result.user!.id,
+        email: result.user!.email,
+        role: result.user!.role
+      });
+
+      return new Response(
+        JSON.stringify({ 
+          token,
+          user: {
+            id: result.user!.id,
+            email: result.user!.email,
+            role: result.user!.role,
+            first_name: result.user!.first_name,
+            last_name: result.user!.last_name
+          }
+        }),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Registration error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Registration failed' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  private async handleGetVMs(userId: string): Promise<Response> {
+    try {
+      const vms = await this.dbService.getVirtualMachinesByUser(userId);
+      return new Response(
+        JSON.stringify(vms),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Get VMs error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch VMs' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  private async handleCreateVM(request: CloudflareRequest, userId: string): Promise<Response> {
+    try {
+      const vmData = await request.json();
+      // Implementation would create VM via cloud provider APIs
+      return new Response(
+        JSON.stringify({ message: 'VM creation not implemented yet' }),
+        { status: 501, headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Create VM error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to create VM' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  private async handleUpdateVM(request: CloudflareRequest, vmId: string, userId: string): Promise<Response> {
+    try {
+      const updateData = await request.json();
+      // Implementation would update VM via cloud provider APIs
+      return new Response(
+        JSON.stringify({ message: 'VM update not implemented yet' }),
+        { status: 501, headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Update VM error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to update VM' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  private async handleDeleteVM(vmId: string, userId: string): Promise<Response> {
+    try {
+      // Implementation would delete VM via cloud provider APIs
+      return new Response(
+        JSON.stringify({ message: 'VM deletion not implemented yet' }),
+        { status: 501, headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Delete VM error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to delete VM' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  private async handleGetVMMetrics(vmId: string, userId: string): Promise<Response> {
+    try {
+      const metrics = await this.dbService.getVMMetrics(vmId);
+      return new Response(
+        JSON.stringify(metrics),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Get VM metrics error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch VM metrics' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
+  private async handleGetAuditLogs(userId: string): Promise<Response> {
+    try {
+      const logs = await this.dbService.getAuditLogs(userId);
+      return new Response(
+        JSON.stringify(logs),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      console.error('Get audit logs error:', error);
+      return new Response(
+        JSON.stringify({ error: 'Failed to fetch audit logs' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+  }
+
   private async verifyPassword(password: string, hash: string): Promise<boolean> {
     console.log('Verifying password with hash length:', hash.length);
     
@@ -737,6 +378,75 @@ export class CloudflareWorkerService {
     const computedHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     
     return computedHash === hash;
+  }
+
+  private async generateToken(payload: { userId: string; email: string; role: string }): Promise<string> {
+    const header = { alg: 'HS256', typ: 'JWT' };
+    const tokenPayload = {
+      ...payload,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (24 * 60 * 60) // 24 hours
+    };
+
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(this.env.JWT_SECRET),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+
+    const headerB64 = btoa(JSON.stringify(header)).replace(/=/g, '');
+    const payloadB64 = btoa(JSON.stringify(tokenPayload)).replace(/=/g, '');
+    const data = `${headerB64}.${payloadB64}`;
+
+    const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(data));
+    const signatureB64 = btoa(String.fromCharCode(...new Uint8Array(signature)))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+
+    return `${data}.${signatureB64}`;
+  }
+
+  private async verifyToken(token: string): Promise<{ userId: string; email: string; role: string } | null> {
+    try {
+      const [headerB64, payloadB64, signatureB64] = token.split('.');
+      
+      const encoder = new TextEncoder();
+      const key = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(this.env.JWT_SECRET),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false,
+        ['verify']
+      );
+
+      const data = `${headerB64}.${payloadB64}`;
+      const signature = Uint8Array.from(atob(signatureB64.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+
+      const isValid = await crypto.subtle.verify('HMAC', key, signature, encoder.encode(data));
+      if (!isValid) {
+        return null;
+      }
+
+      const payload = JSON.parse(atob(payloadB64));
+      
+      // Check expiration
+      if (payload.exp < Math.floor(Date.now() / 1000)) {
+        return null;
+      }
+
+      return {
+        userId: payload.userId,
+        email: payload.email,
+        role: payload.role
+      };
+    } catch (error) {
+      console.error('Token verification error:', error);
+      return null;
+    }
   }
 }
 
