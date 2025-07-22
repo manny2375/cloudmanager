@@ -1,7 +1,6 @@
 name = "cloudmanager"
 main = "src/worker/index.ts"
 compatibility_date = "2024-01-15"
-route = ""
 workers_dev = true
 
 [vars]
@@ -16,6 +15,11 @@ database_id = "d5a88802-2ef8-4878-b882-97f8b2aa37af"
 # Production environment
 [env.production]
 name = "cloudmanager"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "cloudmanager-db"
+database_id = "d5a88802-2ef8-4878-b882-97f8b2aa37af"
 
 [env.production.vars]
 ENVIRONMENT = "production"
