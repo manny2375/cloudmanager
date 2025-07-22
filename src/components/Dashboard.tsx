@@ -1,209 +1,169 @@
 import { useState, useEffect } from 'react';
 import { 
-  Cloud, 
-  Server, 
+  Monitor, 
+  Plus, 
   Settings, 
-  Activity, 
-  Database,
-  Monitor,
-  Power,
-  RefreshCw,
-  PlusCircle,
-  AlertCircle,
-  X,
-  Save,
-  AlertTriangle,
+  Moon, 
+  Sun, 
+  Power, 
+  KeyRound,
+  Server,
+  Activity,
   DollarSign,
-  Moon,
-  Sun,
-  Trash2,
-  KeyRound
+  TrendingUp,
+  Cloud,
+  Cpu,
+  HardDrive,
+  Network,
+  BarChart3,
+  FileText,
+  X,
+  Eye,
+  EyeOff
 } from 'lucide-react';
+import apiClient from '../lib/api';
 
-interface VirtualMachine {
+interface VM {
   id: string;
   name: string;
-  status: 'running' | 'stopped' | 'error';
-  platform: 'aws' | 'azure' | 'proxmox';
-  type: string;
-  ip: string;
+  status: 'running' | 'stopped' | 'pending' | 'error';
+  provider: 'aws' | 'azure' | 'proxmox';
+  instanceType: string;
   cpu: number;
   memory: number;
   storage: number;
-  costPerHour: number;
-  os: string;
+  cost: number;
+  uptime: string;
+  location: string;
 }
 
 interface DashboardProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onLogout: () => void;
-  onViewLogs?: () => void;
-  onViewMetrics?: () => void;
+  onViewLogs: () => void;
+  onViewMetrics: () => void;
 }
 
 export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, onViewMetrics }: DashboardProps) {
-  const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'aws' | 'azure' | 'proxmox'>('all');
-  const [isNewVMModalOpen, setIsNewVMModalOpen] = useState(false);
-  const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
-  const [isStopConfirmationOpen, setIsStopConfirmationOpen] = useState(false);
-  const [isDeleteConfirmationOpen, setIsDeleteConfirmationOpen] = useState(false);
-  const [vmToStop, setVmToStop] = useState<VirtualMachine | null>(null);
-  const [vmToDelete, setVmToDelete] = useState<VirtualMachine | null>(null);
-  const [selectedVM, setSelectedVM] = useState<VirtualMachine | null>(null);
-  const [isCreatingVM, setIsCreatingVM] = useState(false);
-  const [isSavingConfig, setIsSavingConfig] = useState(false);
-  const [isStoppingVM, setIsStoppingVM] = useState(false);
-  const [isDeletingVM, setIsDeletingVM] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isCredentialsModalOpen, setIsCredentialsModalOpen] = useState(false);
+  const [vms, setVms] = useState<VM[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showCredentialsModal, setShowCredentialsModal] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<'aws' | 'azure' | 'proxmox'>('aws');
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({
+    aws_secret: false,
+    azure_secret: false,
+    proxmox_password: false
+  });
 
-  const [virtualMachines, setVirtualMachines] = useState<VirtualMachine[]>([
-    {
-      id: '1',
-      name: 'prod-web-01',
-      status: 'running',
-      platform: 'aws',
-      type: 't3.medium',
-      ip: '10.0.1.4',
-      cpu: 2,
-      memory: 4,
-      storage: 50,
-      costPerHour: 0.0416,
-      os: 'Amazon Linux 2'
-    },
-    {
-      id: '2',
-      name: 'dev-db-01',
-      status: 'stopped',
-      platform: 'azure',
-      type: 'Standard_D2s_v3',
-      ip: '10.0.2.5',
-      cpu: 2,
-      memory: 8,
-      storage: 100,
-      costPerHour: 0.0912,
-      os: 'Ubuntu'
-    },
-    {
-      id: '3',
-      name: 'test-app-01',
-      status: 'running',
-      platform: 'proxmox',
-      type: 'custom',
-      ip: '192.168.1.10',
-      cpu: 4,
-      memory: 16,
-      storage: 200,
-      costPerHour: 0.0250,
-      os: 'Debian'
-    }
-  ]);
+  // Load VMs from API
+  useEffect(() => {
+    const loadVMs = async () => {
+      try {
+        setIsLoading(true);
+        const result = await apiClient.getVMs();
+        if (result.error) {
+          console.error('Failed to load VMs:', result.error);
+          setVms([]);
+        } else {
+          setVms(result.data || []);
+        }
+      } catch (error) {
+        console.error('Error loading VMs:', error);
+        setVms([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-  const calculateMonthlyCost = (vm: VirtualMachine) => {
-    if (vm.status === 'stopped') return 0;
-    return (vm.costPerHour * 24 * 30).toFixed(2);
+    loadVMs();
+  }, []);
+
+  const handleSaveCredentials = async () => {
+    setIsSavingCredentials(true);
+    
+    // TODO: Implement actual credential saving to backend
+    await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call
+    
+    setIsSavingCredentials(false);
+    setShowCredentialsModal(false);
   };
 
-  const getTotalMonthlyCost = () => {
-    return virtualMachines
-      .filter(vm => vm.status === 'running')
-      .reduce((total, vm) => total + vm.costPerHour * 24 * 30, 0)
-      .toFixed(2);
+  const togglePasswordVisibility = (field: keyof typeof showPasswords) => {
+    setShowPasswords(prev => ({
+      ...prev,
+      [field]: !prev[field]
+    }));
   };
-
-  const filteredVMs = selectedPlatform === 'all' 
-    ? virtualMachines 
-    : virtualMachines.filter(vm => vm.platform === selectedPlatform);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'running':
-        return darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800';
+        return 'text-green-500';
       case 'stopped':
-        return darkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-100 text-gray-800';
+        return 'text-red-500';
+      case 'pending':
+        return 'text-yellow-500';
       case 'error':
-        return darkMode ? 'bg-red-900 text-red-100' : 'bg-red-100 text-red-800';
+        return 'text-red-600';
       default:
-        return darkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-100 text-gray-800';
+        return 'text-gray-500';
     }
   };
 
-  const getPlatformIcon = (platform: string) => {
-    switch (platform) {
+  const getProviderIcon = (provider: string) => {
+    switch (provider) {
       case 'aws':
-        return <Cloud className="w-5 h-5 text-orange-500" />;
+        return <Cloud className="w-4 h-4 text-orange-500" />;
       case 'azure':
-        return <Cloud className="w-5 h-5 text-blue-500" />;
+        return <Cloud className="w-4 h-4 text-blue-500" />;
       case 'proxmox':
-        return <Server className="w-5 h-5 text-green-500" />;
+        return <Server className="w-4 h-4 text-green-500" />;
       default:
-        return <Server className="w-5 h-5" />;
+        return <Server className="w-4 h-4 text-gray-500" />;
     }
   };
 
-  const formatResources = (vm: VirtualMachine) => {
-    return `CPU:${vm.cpu}C | RAM:${vm.memory}G | HD:${vm.storage}G`;
-  };
+  const totalCost = vms.reduce((sum, vm) => sum + vm.cost, 0);
+  const runningVMs = vms.filter(vm => vm.status === 'running').length;
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}`}>
       {/* Header */}
-      <header className={darkMode ? 'bg-gray-800 shadow-sm' : 'bg-white shadow-sm'}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
+      <header className={`${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} border-b`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <Monitor className={`h-8 w-8 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-              <h1 className="ml-3 text-2xl font-semibold">Cloud Manager</h1>
+              <Monitor className="w-8 h-8 text-blue-600 mr-3" />
+              <h1 className="text-xl font-semibold">Cloud Manager</h1>
             </div>
             <div className="flex items-center space-x-4">
               <button
-                onClick={onToggleDarkMode}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                onClick={() => setShowCredentialsModal(true)}
+                className={`p-2 rounded-md ${
+                  darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
+                }`}
+                title="Cloud Provider Credentials"
               >
-                {darkMode ? (
-                  <Sun className="w-6 h-6 text-yellow-400" />
-                ) : (
-                  <Moon className="w-6 h-6 text-gray-600" />
-                )}
-              </button>
-              <button 
-                onClick={() => setIsSettingsOpen(true)}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                aria-label="Open settings"
-              >
-                <Settings className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
-              </button>
-              <button 
-                onClick={onViewMetrics}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                aria-label="View activity"
-              >
-                <Activity className={darkMode ? 'w-6 h-6 text-gray-300' : 'w-6 h-6 text-gray-600'} />
-              </button>
-              <button 
-                onClick={onViewLogs}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                aria-label="View logs"
-              >
-                <Database className={darkMode ? 'w-6 h-6 text-gray-300' : 'w-6 h-6 text-gray-600'} />
+                <KeyRound className="w-5 h-5" />
               </button>
               <button
-                onClick={() => setIsCredentialsModalOpen(true)}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                aria-label="Cloud Provider Credentials"
+                onClick={onToggleDarkMode}
+                className={`p-2 rounded-md ${
+                  darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
+                }`}
               >
-                <KeyRound className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </button>
               <button
                 onClick={onLogout}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-                aria-label="Logout"
+                className={`p-2 rounded-md ${
+                  darkMode ? 'hover:bg-gray-700 text-gray-300' : 'hover:bg-gray-100 text-gray-600'
+                }`}
+                title="Logout"
               >
-                <Power className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
+                <Power className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -212,1130 +172,516 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Dashboard Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
             <div className="flex items-center">
-              <Server className={`w-8 h-8 ${darkMode ? 'text-blue-400' : 'text-blue-500'}`} />
+              <Server className="w-8 h-8 text-blue-500" />
               <div className="ml-4">
-                <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Total VMs</p>
-                <p className="text-2xl font-semibold">{virtualMachines.length}</p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Total VMs</p>
+                <p className="text-2xl font-semibold">{vms.length}</p>
               </div>
             </div>
           </div>
+          
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
             <div className="flex items-center">
-              <Power className={`w-8 h-8 ${darkMode ? 'text-green-400' : 'text-green-500'}`} />
+              <Activity className="w-8 h-8 text-green-500" />
               <div className="ml-4">
-                <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Running</p>
-                <p className="text-2xl font-semibold">
-                  {virtualMachines.filter(vm => vm.status === 'running').length}
-                </p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Running</p>
+                <p className="text-2xl font-semibold">{runningVMs}</p>
               </div>
             </div>
           </div>
+          
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
             <div className="flex items-center">
-              <Database className={`w-8 h-8 ${darkMode ? 'text-purple-400' : 'text-purple-500'}`} />
+              <DollarSign className="w-8 h-8 text-yellow-500" />
               <div className="ml-4">
-                <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Total Storage</p>
-                <p className="text-2xl font-semibold">
-                  {virtualMachines.reduce((acc, vm) => acc + vm.storage, 0)}GB
-                </p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Monthly Cost</p>
+                <p className="text-2xl font-semibold">${totalCost.toFixed(2)}</p>
               </div>
             </div>
           </div>
+          
           <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
             <div className="flex items-center">
-              <DollarSign className={`w-8 h-8 ${darkMode ? 'text-emerald-400' : 'text-emerald-500'}`} />
+              <TrendingUp className="w-8 h-8 text-purple-500" />
               <div className="ml-4">
-                <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Monthly Cost</p>
-                <p className="text-2xl font-semibold">
-                  ${getTotalMonthlyCost()}
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
-            <div className="flex items-center">
-              <Activity className={`w-8 h-8 ${darkMode ? 'text-blue-400' : 'text-blue-500'}`} />
-              <div className="ml-4">
-                <p className={`text-sm font-medium ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Activity</p>
-                <p className="text-2xl font-semibold">0</p>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>Efficiency</p>
+                <p className="text-2xl font-semibold">94%</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Controls */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex space-x-2">
-            <button
-              onClick={() => setSelectedPlatform('all')}
-              className={`px-4 py-2 rounded-md ${
-                selectedPlatform === 'all' 
-                  ? darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
-                  : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              All Platforms
-            </button>
-            <button
-              onClick={() => setSelectedPlatform('aws')}
-              className={`px-4 py-2 rounded-md ${
-                selectedPlatform === 'aws' 
-                  ? darkMode ? 'bg-orange-900 text-orange-100' : 'bg-orange-100 text-orange-800'
-                  : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              AWS
-            </button>
-            <button
-              onClick={() => setSelectedPlatform('azure')}
-              className={`px-4 py-2 rounded-md ${
-                selectedPlatform === 'azure' 
-                  ? darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
-                  : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              Azure
-            </button>
-            <button
-              onClick={() => setSelectedPlatform('proxmox')}
-              className={`px-4 py-2 rounded-md ${
-                selectedPlatform === 'proxmox' 
-                  ? darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'
-                  : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-              }`}
-            >
-              Proxmox
-            </button>
-          </div>
-          <div className="flex space-x-2">
-            <button className={`flex items-center px-4 py-2 rounded-md ${
-              darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
-            }`}>
-              <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh
-            </button>
-            <button 
-              onClick={() => setIsNewVMModalOpen(true)}
-              className={`flex items-center px-4 py-2 text-white rounded-md ${
-                darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'
-              }`}
-            >
-              <PlusCircle className="w-4 h-4 mr-2" />
-              New VM
-            </button>
-          </div>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <button
+            onClick={onViewLogs}
+            className={`${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} rounded-lg shadow p-6 text-left transition-colors`}
+          >
+            <div className="flex items-center">
+              <FileText className="w-8 h-8 text-blue-500 mb-4" />
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold mb-2">System Logs</h3>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  View logs from AWS, Azure, and Proxmox
+                </p>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={onViewMetrics}
+            className={`${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} rounded-lg shadow p-6 text-left transition-colors`}
+          >
+            <div className="flex items-center">
+              <BarChart3 className="w-8 h-8 text-green-500 mb-4" />
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold mb-2">Performance Metrics</h3>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Monitor CPU, memory, and network usage
+                </p>
+              </div>
+            </div>
+          </button>
+
+          <button className={`${darkMode ? 'bg-gray-800 hover:bg-gray-700' : 'bg-white hover:bg-gray-50'} rounded-lg shadow p-6 text-left transition-colors`}>
+            <div className="flex items-center">
+              <Settings className="w-8 h-8 text-purple-500 mb-4" />
+              <div className="ml-4">
+                <h3 className="text-lg font-semibold mb-2">Settings</h3>
+                <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  Configure cloud providers and preferences
+                </p>
+              </div>
+            </div>
+          </button>
         </div>
 
-        {/* VM List */}
-        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} shadow rounded-lg overflow-hidden`}>
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className={darkMode ? 'bg-gray-700' : 'bg-gray-50'}>
-                <tr>
-                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                    Name
-                  </th>
-                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                    Status
-                  </th>
-                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                    Platform
-                  </th>
-                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                    Type
-                  </th>
-                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                    OS
-                  </th>
-                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                    IP Address
-                  </th>
-                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                    Resources
-                  </th>
-                  <th scope="col" className={`px-6 py-3 text-left text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                    Cost
-                  </th>
-                  <th scope="col" className={`px-6 py-3 text-right text-xs font-medium ${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider`}>
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className={`${darkMode ? 'bg-gray-800' : 'bg-white'} divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
-                {filteredVMs.map((vm) => (
-                  <tr key={vm.id} className={darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className={`text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>{vm.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(vm.status)}`}>
-                        {vm.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {getPlatformIcon(vm.platform)}
-                        <span className={`ml-2 text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                          {vm.platform.toUpperCase()}
-                        </span>
-                      </div>
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                      {vm.type}
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                      {vm.os}
-                    </td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${darkMode ? 'text-gray-300' : 'text-gray-500'}`}>
-                      {vm.ip}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className={`text-sm ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                        {formatResources(vm)}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm">
-                        <div className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                          ${vm.costPerHour.toFixed(4)}/hr
-                        </div>
-                        <div className={darkMode ? 'text-gray-300' : 'text-gray-500'}>
-                          ${calculateMonthlyCost(vm)}/mo
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end space-x-4">
-                        <button 
-                          onClick={() => {
-                            if (vm.status === 'running') {
-                              setVmToStop(vm);
-                              setIsStopConfirmationOpen(true);
-                            }
-                          }}
-                          className={`${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-900'}`}
-                        >
-                          {vm.status === 'running' ? 'Stop' : 'Start'}
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setSelectedVM(vm);
-                            setIsConfigureModalOpen(true);
-                          }}
-                          className={darkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-900'}
-                        >
-                          Configure
-                        </button>
-                        <button 
-                          onClick={() => {
-                            setVmToDelete(vm);
-                            setIsDeleteConfirmationOpen(true);
-                          }}
-                          className={darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-900'}
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Virtual Machines */}
+        <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow`}>
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Virtual Machines</h2>
+              <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                <Plus className="w-4 h-4 mr-2" />
+                New VM
+              </button>
+            </div>
+          </div>
+          
+          <div className="p-6">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                <span className="ml-3">Loading virtual machines...</span>
+              </div>
+            ) : vms.length === 0 ? (
+              <div className="text-center py-8">
+                <Server className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p className={`text-lg ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+                  No virtual machines found
+                </p>
+                <p className={`text-sm ${darkMode ? 'text-gray-500' : 'text-gray-500'}`}>
+                  Create your first VM to get started
+                </p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full">
+                  <thead>
+                    <tr className={`${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Name</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Provider</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Instance</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Resources</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Cost/Month</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className={`${darkMode ? 'bg-gray-800' : 'bg-white'} divide-y ${darkMode ? 'divide-gray-700' : 'divide-gray-200'}`}>
+                    {vms.map((vm) => (
+                      <tr key={vm.id} className={`${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <Server className="w-5 h-5 text-gray-400 mr-3" />
+                            <div>
+                              <div className="text-sm font-medium">{vm.name}</div>
+                              <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>{vm.location}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            vm.status === 'running' ? 'bg-green-100 text-green-800' :
+                            vm.status === 'stopped' ? 'bg-red-100 text-red-800' :
+                            vm.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {vm.status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            {getProviderIcon(vm.provider)}
+                            <span className="ml-2 text-sm capitalize">{vm.provider}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">{vm.instanceType}</td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm">
+                            <div className="flex items-center mb-1">
+                              <Cpu className="w-3 h-3 mr-1" />
+                              {vm.cpu} vCPU
+                            </div>
+                            <div className="flex items-center mb-1">
+                              <HardDrive className="w-3 h-3 mr-1" />
+                              {vm.memory}GB RAM
+                            </div>
+                            <div className="flex items-center">
+                              <Network className="w-3 h-3 mr-1" />
+                              {vm.storage}GB
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">${vm.cost.toFixed(2)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <button className="text-blue-600 hover:text-blue-900 mr-3">Edit</button>
+                          <button className="text-red-600 hover:text-red-900">Delete</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </main>
 
       {/* Cloud Provider Credentials Modal */}
-      {isCredentialsModalOpen && (
+      {showCredentialsModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-2xl w-full p-6`}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <KeyRound className="w-6 h-6 mr-2 text-blue-500" />
-                <h3 className="text-xl font-semibold">Cloud Provider Credentials</h3>
+          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto`}>
+            {/* Modal Header */}
+            <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold">Cloud Provider Credentials</h3>
+                <button
+                  onClick={() => setShowCredentialsModal(false)}
+                  className={`p-2 rounded-md ${darkMode ? 'hover:bg-gray-700 text-gray-400' : 'hover:bg-gray-100 text-gray-600'}`}
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setIsCredentialsModalOpen(false)}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
-            
-            <div className="space-y-6">
-              {/* Provider Selection */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Select Cloud Provider</h4>
-                <div className="flex space-x-2">
+
+            {/* Provider Tabs */}
+            <div className={`px-6 py-4 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+              <div className="flex space-x-1">
+                {(['aws', 'azure', 'proxmox'] as const).map((provider) => (
                   <button
-                    onClick={() => setSelectedProvider('aws')}
-                    className={`flex items-center px-4 py-2 rounded-md ${
-                      selectedProvider === 'aws' 
-                        ? darkMode ? 'bg-orange-900 text-orange-100' : 'bg-orange-100 text-orange-800'
-                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    key={provider}
+                    onClick={() => setSelectedProvider(provider)}
+                    className={`flex items-center px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                      selectedProvider === provider
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-100'
+                        : darkMode ? 'text-gray-400 hover:text-gray-200 hover:bg-gray-700' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
-                    <Cloud className="w-4 h-4 mr-2 text-orange-500" />
-                    AWS
+                    {provider === 'aws' && <Cloud className="w-4 h-4 mr-2 text-orange-500" />}
+                    {provider === 'azure' && <Cloud className="w-4 h-4 mr-2 text-blue-500" />}
+                    {provider === 'proxmox' && <Server className="w-4 h-4 mr-2 text-green-500" />}
+                    {provider.toUpperCase()}
                   </button>
-                  <button
-                    onClick={() => setSelectedProvider('azure')}
-                    className={`flex items-center px-4 py-2 rounded-md ${
-                      selectedProvider === 'azure' 
-                        ? darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
-                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Cloud className="w-4 h-4 mr-2 text-blue-500" />
-                    Azure
-                  </button>
-                  <button
-                    onClick={() => setSelectedProvider('proxmox')}
-                    className={`flex items-center px-4 py-2 rounded-md ${
-                      selectedProvider === 'proxmox' 
-                        ? darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'
-                        : darkMode ? 'bg-gray-700 text-gray-300 hover:bg-gray-600' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    <Server className="w-4 h-4 mr-2 text-green-500" />
-                    Proxmox
-                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div className="px-6 py-6">
+              {/* Security Notice */}
+              <div className={`mb-6 p-4 rounded-md ${darkMode ? 'bg-blue-900 border border-blue-700' : 'bg-blue-50 border border-blue-200'}`}>
+                <div className="flex items-start">
+                  <KeyRound className="w-5 h-5 text-blue-500 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <h4 className={`text-sm font-medium ${darkMode ? 'text-blue-100' : 'text-blue-800'}`}>
+                      Security Notice
+                    </h4>
+                    <p className={`text-sm mt-1 ${darkMode ? 'text-blue-200' : 'text-blue-700'}`}>
+                      Your credentials are encrypted and stored securely. We recommend using service accounts with minimal required permissions.
+                    </p>
+                  </div>
                 </div>
               </div>
+
               {/* AWS Credentials */}
               {selectedProvider === 'aws' && (
-                <div>
-                  <h4 className="text-lg font-medium mb-3">AWS Credentials</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Access Key ID *
-                      </label>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Access Key ID *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="AKIAIOSFODNN7EXAMPLE"
+                      className={`w-full px-3 py-2 border rounded-md ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Secret Access Key *
+                    </label>
+                    <div className="relative">
                       <input
-                        type="text"
-                        placeholder="AKIA..."
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                        type={showPasswords.aws_secret ? "text" : "password"}
+                        placeholder="wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+                        className={`w-full px-3 py-2 pr-10 border rounded-md ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
+                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                       />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Secret Access Key *
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="••••••••••••••••••••••••••••••••••••••••"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Default Region
-                      </label>
-                      <select
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white'
-                            : 'bg-white border-gray-300 text-gray-900'
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('aws_secret')}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
                       >
-                        <option value="us-east-1">US East (N. Virginia)</option>
-                        <option value="us-west-2">US West (Oregon)</option>
-                        <option value="eu-west-1">Europe (Ireland)</option>
-                        <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
-                      </select>
+                        {showPasswords.aws_secret ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </button>
                     </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Session Token (Optional)
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="For temporary credentials"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
-                      />
-                    </div>
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Default Region
+                    </label>
+                    <select className={`w-full px-3 py-2 border rounded-md ${
+                      darkMode 
+                        ? 'bg-gray-700 border-gray-600 text-white' 
+                        : 'bg-white border-gray-300 text-gray-900'
+                    } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}>
+                      <option value="us-east-1">US East (N. Virginia)</option>
+                      <option value="us-west-2">US West (Oregon)</option>
+                      <option value="eu-west-1">Europe (Ireland)</option>
+                      <option value="ap-southeast-1">Asia Pacific (Singapore)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Session Token (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="For temporary credentials"
+                      className={`w-full px-3 py-2 border rounded-md ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    />
                   </div>
                 </div>
               )}
 
               {/* Azure Credentials */}
               {selectedProvider === 'azure' && (
-                <div>
-                  <h4 className="text-lg font-medium mb-3">Azure Credentials</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Subscription ID *
-                      </label>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Subscription ID *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="12345678-1234-1234-1234-123456789012"
+                      className={`w-full px-3 py-2 border rounded-md ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Client ID *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="12345678-1234-1234-1234-123456789012"
+                      className={`w-full px-3 py-2 border rounded-md ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Client Secret *
+                    </label>
+                    <div className="relative">
                       <input
-                        type="text"
-                        placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                        type={showPasswords.azure_secret ? "text" : "password"}
+                        placeholder="Your Azure client secret"
+                        className={`w-full px-3 py-2 pr-10 border rounded-md ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
+                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                       />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('azure_secret')}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      >
+                        {showPasswords.azure_secret ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </button>
                     </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Client ID *
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Application (client) ID"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Client Secret *
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="••••••••••••••••••••••••••••••••••••••••"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Tenant ID *
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Directory (tenant) ID"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
-                      />
-                    </div>
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Tenant ID *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="12345678-1234-1234-1234-123456789012"
+                      className={`w-full px-3 py-2 border rounded-md ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    />
                   </div>
                 </div>
               )}
 
               {/* Proxmox Credentials */}
               {selectedProvider === 'proxmox' && (
-                <div>
-                  <h4 className="text-lg font-medium mb-3">Proxmox Credentials</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Server URL *
-                      </label>
+                <div className="space-y-4">
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Server URL *
+                    </label>
+                    <input
+                      type="url"
+                      placeholder="https://proxmox.example.com:8006"
+                      className={`w-full px-3 py-2 border rounded-md ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Username *
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="root@pam or user@pve"
+                      className={`w-full px-3 py-2 border rounded-md ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    />
+                  </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Password *
+                    </label>
+                    <div className="relative">
                       <input
-                        type="url"
-                        placeholder="https://proxmox.example.com:8006"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
+                        type={showPasswords.proxmox_password ? "text" : "password"}
+                        placeholder="Your Proxmox password"
+                        className={`w-full px-3 py-2 pr-10 border rounded-md ${
+                          darkMode 
+                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
                             : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
+                        } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                       />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Username *
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="root@pam"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Password *
-                      </label>
-                      <input
-                        type="password"
-                        placeholder="••••••••••••••••••••••••••••••••••••••••"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
-                      />
-                    </div>
-                    <div>
-                      <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                        Node Name
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="pve"
-                        className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                          darkMode
-                            ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                            : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                        }`}
-                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('proxmox_password')}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                      >
+                        {showPasswords.proxmox_password ? (
+                          <EyeOff className="h-4 w-4 text-gray-400" />
+                        ) : (
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        )}
+                      </button>
                     </div>
                   </div>
-                  <div className="mt-4">
-                    <div className="flex items-center">
-                      <input
-                        type="checkbox"
-                        id="ignore-ssl"
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                      />
-                      <label htmlFor="ignore-ssl" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        Ignore SSL certificate errors (not recommended for production)
-                      </label>
-                    </div>
+                  <div>
+                    <label className={`block text-sm font-medium mb-2 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Node Name (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="pve"
+                      className={`w-full px-3 py-2 border rounded-md ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
+                      } focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
+                    />
+                  </div>
+                  <div className="flex items-center">
+                    <input
+                      type="checkbox"
+                      id="ignore-ssl"
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <label htmlFor="ignore-ssl" className={`ml-2 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Ignore SSL certificate errors
+                      <span className={`block text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        ⚠️ Only use for development environments
+                      </span>
+                    </label>
                   </div>
                 </div>
               )}
-
-              {/* Security Notice */}
-              <div className={`p-4 rounded-lg ${darkMode ? 'bg-yellow-900 border-yellow-700' : 'bg-yellow-50 border-yellow-200'} border`}>
-                <div className="flex items-start">
-                  <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 mr-2 flex-shrink-0" />
-                  <div>
-                    <h5 className={`font-medium ${darkMode ? 'text-yellow-200' : 'text-yellow-800'}`}>
-                      Security Notice
-                    </h5>
-                    <p className={`text-sm mt-1 ${darkMode ? 'text-yellow-300' : 'text-yellow-700'}`}>
-                      Your credentials will be encrypted and stored securely. We recommend using dedicated service accounts 
-                      with minimal required permissions for cloud provider access.
-                    </p>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+            {/* Modal Footer */}
+            <div className={`px-6 py-4 border-t ${darkMode ? 'border-gray-700' : 'border-gray-200'} flex justify-end space-x-3`}>
               <button
-                onClick={() => setIsCredentialsModalOpen(false)}
-                className={`px-4 py-2 rounded-md ${
-                  darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
+                onClick={() => setShowCredentialsModal(false)}
+                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                  darkMode ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-50'
+                } border ${darkMode ? 'border-gray-600' : 'border-gray-300'}`}
               >
                 Cancel
               </button>
               <button
-                onClick={() => {
-                  setIsSavingCredentials(true);
-                  // Simulate API call to save credentials
-                  setTimeout(() => {
-                    setIsSavingCredentials(false);
-                    setIsCredentialsModalOpen(false);
-                    // Show success message or refresh provider list
-                  }, 2000);
-                }}
+                onClick={handleSaveCredentials}
                 disabled={isSavingCredentials}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center ${
+                className={`px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
                   isSavingCredentials ? 'opacity-75 cursor-not-allowed' : ''
                 }`}
               >
                 {isSavingCredentials ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Saving...
-                  </>
+                  </div>
                 ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Save Credentials
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Stop Confirmation Modal */}
-      {isStopConfirmationOpen && vmToStop && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-yellow-500 mr-2" />
-              <h3 className="text-xl font-semibold">Stop Virtual Machine</h3>
-            </div>
-            <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Are you sure you want to stop {vmToStop.name}? This will interrupt any running processes.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => {
-                  setIsStopConfirmationOpen(false);
-                  setVmToStop(null);
-                }}
-                className={`px-4 py-2 rounded-md ${
-                  darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setIsStoppingVM(true);
-                  // Simulate API call
-                  setTimeout(() => {
-                    setIsStoppingVM(false);
-                    setIsStopConfirmationOpen(false);
-                    setVmToStop(null);
-                  }, 2000);
-                }}
-                disabled={isStoppingVM}
-                className={`px-4 py-2 rounded-md bg-red-600 text-white flex items-center ${
-                  isStoppingVM ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-700'
-                }`}
-              >
-                {isStoppingVM ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Stopping...
-                  </>
-                ) : (
-                  'Stop VM'
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Settings Modal */}
-      {isSettingsOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-2xl w-full p-6`}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <Settings className="w-6 h-6 mr-2 text-blue-500" />
-                <h3 className="text-xl font-semibold">Settings</h3>
-              </div>
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              {/* Theme Settings */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Appearance</h4>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                      Dark Mode
-                    </p>
-                    <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                      Toggle between light and dark themes
-                    </p>
-                  </div>
-                  <button
-                    onClick={onToggleDarkMode}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      darkMode ? 'bg-blue-600' : 'bg-gray-200'
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        darkMode ? 'translate-x-6' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-
-              {/* Notification Settings */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Notifications</h4>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                        Email Notifications
-                      </p>
-                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Receive email alerts for VM status changes
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                        Cost Alerts
-                      </p>
-                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Get notified when monthly costs exceed budget
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Auto-refresh Settings */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Dashboard</h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Auto-refresh Interval
-                    </label>
-                    <select
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                      defaultValue="30"
-                    >
-                      <option value="10">10 seconds</option>
-                      <option value="30">30 seconds</option>
-                      <option value="60">1 minute</option>
-                      <option value="300">5 minutes</option>
-                      <option value="0">Disabled</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Account Settings */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Account</h4>
-                <div className="space-y-3">
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Default View
-                    </label>
-                    <select
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                      defaultValue="dashboard"
-                    >
-                      <option value="dashboard">Dashboard</option>
-                      <option value="metrics">Metrics</option>
-                      <option value="logs">Logs</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className={`font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'}`}>
-                        Show Resource Usage
-                      </p>
-                      <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-                        Display detailed resource information in VM table
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      defaultChecked
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setIsSettingsOpen(false)}
-                className={`px-4 py-2 rounded-md ${
-                  darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  // Save settings logic would go here
-                  setIsSettingsOpen(false);
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                Save Settings
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* New VM Modal */}
-      {isNewVMModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-2xl w-full p-6`}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center">
-                <PlusCircle className="w-6 h-6 mr-2 text-blue-500" />
-                <h3 className="text-xl font-semibold">Create New Virtual Machine</h3>
-              </div>
-              <button
-                onClick={() => setIsNewVMModalOpen(false)}
-                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="space-y-6">
-              {/* Basic Information */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Basic Information</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      VM Name *
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g., prod-web-02"
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Platform *
-                    </label>
-                    <select
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="">Select Platform</option>
-                      <option value="aws">AWS</option>
-                      <option value="azure">Azure</option>
-                      <option value="proxmox">Proxmox</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Instance Configuration */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Instance Configuration</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Instance Type *
-                    </label>
-                    <select
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="">Select Instance Type</option>
-                      <option value="t3.micro">t3.micro (1 vCPU, 1 GB RAM)</option>
-                      <option value="t3.small">t3.small (1 vCPU, 2 GB RAM)</option>
-                      <option value="t3.medium">t3.medium (2 vCPU, 4 GB RAM)</option>
-                      <option value="t3.large">t3.large (2 vCPU, 8 GB RAM)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Operating System *
-                    </label>
-                    <select
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="">Select OS</option>
-                      <option value="amazon-linux-2">Amazon Linux 2</option>
-                      <option value="ubuntu-20.04">Ubuntu 20.04 LTS</option>
-                      <option value="ubuntu-22.04">Ubuntu 22.04 LTS</option>
-                      <option value="centos-7">CentOS 7</option>
-                      <option value="debian-11">Debian 11</option>
-                      <option value="windows-server-2019">Windows Server 2019</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Storage Configuration */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Storage Configuration</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Root Volume Size (GB) *
-                    </label>
-                    <input
-                      type="number"
-                      min="8"
-                      max="1000"
-                      defaultValue="20"
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Storage Type
-                    </label>
-                    <select
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="gp3">General Purpose SSD (gp3)</option>
-                      <option value="gp2">General Purpose SSD (gp2)</option>
-                      <option value="io1">Provisioned IOPS SSD (io1)</option>
-                      <option value="st1">Throughput Optimized HDD (st1)</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Network Configuration */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Network Configuration</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      VPC/Network
-                    </label>
-                    <select
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="default">Default VPC</option>
-                      <option value="custom-vpc-1">Custom VPC 1</option>
-                      <option value="custom-vpc-2">Custom VPC 2</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Security Group
-                    </label>
-                    <select
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="default">Default Security Group</option>
-                      <option value="web-servers">Web Servers</option>
-                      <option value="database-servers">Database Servers</option>
-                      <option value="custom-sg">Custom Security Group</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              {/* Tags */}
-              <div>
-                <h4 className="text-lg font-medium mb-3">Tags (Optional)</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Environment
-                    </label>
-                    <select
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white'
-                          : 'bg-white border-gray-300 text-gray-900'
-                      }`}
-                    >
-                      <option value="">Select Environment</option>
-                      <option value="production">Production</option>
-                      <option value="staging">Staging</option>
-                      <option value="development">Development</option>
-                      <option value="testing">Testing</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium ${darkMode ? 'text-gray-100' : 'text-gray-900'} mb-2`}>
-                      Project
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="e.g., web-app, api-service"
-                      className={`block w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                        darkMode
-                          ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400'
-                          : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500'
-                      }`}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Cost Estimate */}
-              <div className={`p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
-                <h4 className="text-lg font-medium mb-2">Estimated Cost</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Hourly:</span>
-                    <span className="ml-2 font-medium">$0.0464</span>
-                  </div>
-                  <div>
-                    <span className={darkMode ? 'text-gray-300' : 'text-gray-600'}>Monthly:</span>
-                    <span className="ml-2 font-medium">$33.41</span>
-                  </div>
-                </div>
-                <p className={`text-xs mt-2 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  * Estimates based on selected configuration. Actual costs may vary.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
-              <button
-                onClick={() => setIsNewVMModalOpen(false)}
-                className={`px-4 py-2 rounded-md ${
-                  darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setIsCreatingVM(true);
-                  // Simulate VM creation
-                  setTimeout(() => {
-                    setIsCreatingVM(false);
-                    setIsNewVMModalOpen(false);
-                    // Show success message or refresh VM list
-                  }, 3000);
-                }}
-                disabled={isCreatingVM}
-                className={`px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center ${
-                  isCreatingVM ? 'opacity-75 cursor-not-allowed' : ''
-                }`}
-              >
-                {isCreatingVM ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Creating VM...
-                  </>
-                ) : (
-                  <>
-                    <PlusCircle className="w-4 h-4 mr-2" />
-                    Create Virtual Machine
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {isDeleteConfirmationOpen && vmToDelete && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className={`${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6`}>
-            <div className="flex items-center mb-4">
-              <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
-              <h3 className="text-xl font-semibold">Delete Virtual Machine</h3>
-            </div>
-            <p className={`mb-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-              Are you sure you want to delete {vmToDelete.name}? This action cannot be undone.
-            </p>
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => {
-                  setIsDeleteConfirmationOpen(false);
-                  setVmToDelete(null);
-                }}
-                className={`px-4 py-2 rounded-md ${
-                  darkMode
-                    ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-                    : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
-                }`}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setIsDeletingVM(true);
-                  // Simulate API call
-                  setTimeout(() => {
-                    setIsDeletingVM(false);
-                    setIsDeleteConfirmationOpen(false);
-                    setVmToDelete(null);
-                  }, 2000);
-                }}
-                disabled={isDeletingVM}
-                className={`px-4 py-2 rounded-md bg-red-600 text-white flex items-center ${
-                  isDeletingVM ? 'opacity-75 cursor-not-allowed' : 'hover:bg-red-700'
-                }`}
-              >
-                {isDeletingVM ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete VM
-                  </>
+                  'Save Credentials'
                 )}
               </button>
             </div>
