@@ -20,7 +20,7 @@ database_id = "d5a88802-2ef8-4878-b882-97f8b2aa37af"
 [env.production]
 name = "cloudmanager"
 
-[[env.production.assets]]
+[env.production.assets]
 directory = "./dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
