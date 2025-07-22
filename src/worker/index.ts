@@ -441,10 +441,19 @@ export class CloudflareWorkerService {
 
       // Query user from database
       console.log('Querying database for user:', email);
-      const stmt = this.env.DB.prepare('SELECT * FROM users WHERE email = ? AND is_active = 1');
+      const stmt = this.env.DB.prepare('SELECT * FROM users WHERE email = ?');
       const user = await stmt.bind(email).first();
       
-      console.log('Database query result:', user ? 'User found' : 'User not found');
+      console.log('Database query result:', user ? `User found: ${user.email}, active: ${user.is_active}` : 'User not found');
+      
+      // Debug: List all users in database
+      try {
+        const allUsersStmt = this.env.DB.prepare('SELECT email, is_active FROM users LIMIT 5');
+        const allUsers = await allUsersStmt.all();
+        console.log('All users in database:', allUsers.results);
+      } catch (debugError) {
+        console.log('Could not query all users:', debugError);
+      }
       
       if (!user) {
         console.log('User not found in database');
@@ -454,9 +463,18 @@ export class CloudflareWorkerService {
         );
       }
 
+      // Check if user is active
+      if (!user.is_active) {
+        console.log('User account is inactive');
+        return new Response(
+          JSON.stringify({ error: 'Account is inactive' }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
       // Verify password
       const isValidPassword = await this.verifyPassword(password, user.password_hash);
       console.log('Password verification result:', isValidPassword);
+      console.log('Stored password hash:', user.password_hash);
       
       if (!isValidPassword) {
         console.log('Invalid password provided');
