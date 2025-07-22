@@ -3,7 +3,9 @@ main = "src/lib/cloudflare-worker.ts"
 compatibility_date = "2024-01-15"
 
 [vars]
-ENVIRONMENT = "development"
+ENVIRONMENT = "production"
+# Note: JWT_SECRET should be added as a secret via dashboard or CLI, not here
+# This is just for reference - use 'wrangler secret put JWT_SECRET' instead
 
 [[d1_databases]]
 binding = "DB"
