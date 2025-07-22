@@ -160,7 +160,11 @@ export class CloudflareWorkerService {
     try {
       const { email, password } = await request.json();
       
+      console.log('Login attempt:', { email, password: '***' });
+      
       const authResult = await this.authService.authenticateUser(email, password);
+      console.log('Auth result:', { success: authResult.success, error: authResult.error });
+      
       if (!authResult.success) {
         return new Response(
           JSON.stringify({ error: authResult.error }),
