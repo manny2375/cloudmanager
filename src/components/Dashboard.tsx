@@ -506,7 +506,6 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, on
                   </button>
                 </div>
               </div>
-
               {/* AWS Credentials */}
               {selectedProvider === 'aws' && (
                 <div>
