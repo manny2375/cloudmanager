@@ -47,7 +47,7 @@ class CloudMonitoringService {
   private subscribers: ((logs: LogEntry[]) => void)[] = [];
 
   private constructor() {
-    this.startLogCollection();
+    // Initialize with empty logs - no mock data
   }
 
   static getInstance(): CloudMonitoringService {
@@ -62,7 +62,6 @@ class CloudMonitoringService {
     try {
       // TODO: Implement actual AWS CloudWatch Logs API integration
       // This would require AWS SDK and proper credentials
-      console.log('AWS CloudWatch Logs integration not implemented yet');
       return [];
     } catch (error) {
       console.error('Failed to fetch AWS logs:', error);
@@ -75,7 +74,6 @@ class CloudMonitoringService {
     try {
       // TODO: Implement actual Azure Monitor Logs API integration
       // This would require Azure SDK and proper credentials
-      console.log('Azure Monitor Logs integration not implemented yet');
       return [];
     } catch (error) {
       console.error('Failed to fetch Azure logs:', error);
@@ -88,7 +86,6 @@ class CloudMonitoringService {
     try {
       // TODO: Implement actual Proxmox API integration
       // This would require Proxmox API credentials and proper authentication
-      console.log('Proxmox API integration not implemented yet');
       return [];
     } catch (error) {
       console.error('Failed to fetch Proxmox logs:', error);
@@ -135,7 +132,6 @@ class CloudMonitoringService {
     // TODO: Implement actual Azure Monitor metrics collection  
     // TODO: Implement actual Proxmox metrics collection
     
-    console.log('Cloud provider metrics collection not implemented yet');
 
     this.metrics.push(...metrics);
     
@@ -144,65 +140,10 @@ class CloudMonitoringService {
       this.metrics = this.metrics.slice(0, 200);
     }
 
-    // Log collection activity
-    this.logEvent('debug', `Metrics collection attempted - implementation needed for cloud providers`);
 
     return metrics;
   }
 
-  // Start automatic log collection
-  private startLogCollection(): void {
-    // Initial collection
-    this.collectAllLogs();
-    
-    // Collect logs every 30 seconds
-    setInterval(async () => {
-      await this.collectAllLogs();
-    }, 30000);
-  }
-
-  private async collectAllLogs(): Promise<void> {
-    try {
-      const [awsLogs, azureLogs, proxmoxLogs] = await Promise.all([
-        this.getAWSLogs(),
-        this.getAzureLogs(),
-        this.getProxmoxLogs()
-      ]);
-
-      const allLogs = [...awsLogs, ...azureLogs, ...proxmoxLogs];
-      
-      // Add new logs to the beginning (most recent first)
-      this.logs.unshift(...allLogs);
-      
-      // Remove duplicates based on timestamp and message
-      this.logs = this.logs.filter((log, index, self) => 
-        index === self.findIndex(l => 
-          l.timestamp === log.timestamp && 
-          l.message === log.message && 
-          l.source === log.source
-        )
-      );
-      
-      // Sort by timestamp (most recent first)
-      this.logs.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      
-      // Keep only last 1000 logs
-      if (this.logs.length > 1000) {
-        this.logs = this.logs.slice(0, 1000);
-      }
-
-      // Collect metrics
-      await this.collectMetrics();
-
-      this.notifySubscribers();
-      
-      // Log collection activity
-      this.logEvent('debug', `Log collection attempted - cloud provider integrations needed`);
-    } catch (error) {
-      console.error('Error collecting logs:', error);
-      this.logEvent('error', 'Failed to collect logs from cloud providers', { error: error instanceof Error ? error.message : 'Unknown error' });
-    }
-  }
 
   // Subscribe to log updates
   subscribe(callback: (logs: LogEntry[]) => void): () => void {

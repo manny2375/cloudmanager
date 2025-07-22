@@ -65,6 +65,7 @@ export default function LogsView({ darkMode, onClose }: LogsViewProps) {
         await monitoring.collectMetrics();
       }, 30000); // Refresh every 30 seconds
     }
+    
     return () => {
       unsubscribe();
       if (refreshInterval) {
