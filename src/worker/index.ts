@@ -1,6 +1,6 @@
-// Cloudflare Worker integration for the cloud management dashboard
-import { DatabaseService } from './database';
-import { AuthService } from './auth';
+// Cloudflare Worker - Backend API
+import { DatabaseService } from '../lib/database';
+import { AuthService } from '../lib/auth';
 
 export interface Env {
   DB: D1Database;
@@ -43,6 +43,13 @@ export class CloudflareWorkerService {
     }
 
     try {
+      // Health check
+      if (path === '/health') {
+        return new Response(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }), {
+          headers: { 'Content-Type': 'application/json', ...corsHeaders }
+        });
+      }
+
       // API routes
       if (path.startsWith('/api/')) {
         const response = await this.handleAPIRequest(request, path, method);
@@ -53,8 +60,17 @@ export class CloudflareWorkerService {
         return response;
       }
 
-      // Serve static files (your React app)
-      return await this.handleStaticRequest(request);
+      // Default 404 for non-API routes
+      return new Response(
+        JSON.stringify({ error: 'Not found' }),
+        { 
+          status: 404, 
+          headers: { 
+            'Content-Type': 'application/json',
+            ...corsHeaders
+          } 
+        }
+      );
     } catch (error) {
       console.error('Worker error:', error);
       return new Response(
@@ -128,6 +144,7 @@ export class CloudflareWorkerService {
 
     // Cost tracking endpoints
     if (path === '/api/costs/monthly' && method === 'GET') {
+      const url = new URL(request.url);
       const year = parseInt(url.searchParams.get('year') || new Date().getFullYear().toString());
       const month = parseInt(url.searchParams.get('month') || (new Date().getMonth() + 1).toString());
       return await this.handleGetMonthlyCosts(user.id, year, month);
@@ -140,69 +157,83 @@ export class CloudflareWorkerService {
   }
 
   private async handleLogin(request: CloudflareRequest): Promise<Response> {
-    const { email, password } = await request.json();
-    
-    const authResult = await this.authService.authenticateUser(email, password);
-    if (!authResult.success) {
+    try {
+      const { email, password } = await request.json();
+      
+      const authResult = await this.authService.authenticateUser(email, password);
+      if (!authResult.success) {
+        return new Response(
+          JSON.stringify({ error: authResult.error }),
+          { status: 401, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const token = await this.authService.generateJWT(authResult.user!, this.env.JWT_SECRET);
+      
+      // Log the login
+      await this.dbService.addAuditLog({
+        user_id: authResult.user!.id,
+        action: 'login',
+        resource_type: 'user',
+        resource_id: authResult.user!.id,
+        ip_address: request.headers.get('CF-Connecting-IP') || 'unknown',
+        user_agent: request.headers.get('User-Agent') || 'unknown'
+      });
+
       return new Response(
-        JSON.stringify({ error: authResult.error }),
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
+        JSON.stringify({ 
+          token, 
+          user: {
+            id: authResult.user!.id,
+            email: authResult.user!.email,
+            role: authResult.user!.role,
+            first_name: authResult.user!.first_name,
+            last_name: authResult.user!.last_name
+          }
+        }),
+        { headers: { 'Content-Type': 'application/json' } }
       );
-    }
-
-    const token = await this.authService.generateJWT(authResult.user!, this.env.JWT_SECRET);
-    
-    // Log the login
-    await this.dbService.addAuditLog({
-      user_id: authResult.user!.id,
-      action: 'login',
-      resource_type: 'user',
-      resource_id: authResult.user!.id,
-      ip_address: request.headers.get('CF-Connecting-IP') || 'unknown',
-      user_agent: request.headers.get('User-Agent') || 'unknown'
-    });
-
-    return new Response(
-      JSON.stringify({ 
-        token, 
-        user: {
-          id: authResult.user!.id,
-          email: authResult.user!.email,
-          role: authResult.user!.role,
-          first_name: authResult.user!.first_name,
-          last_name: authResult.user!.last_name
-        }
-      }),
-      { headers: { 'Content-Type': 'application/json' } }
-    );
-  }
-
-  private async handleRegister(request: CloudflareRequest): Promise<Response> {
-    const userData = await request.json();
-    
-    const authResult = await this.authService.registerUser(userData);
-    if (!authResult.success) {
+    } catch (error) {
       return new Response(
-        JSON.stringify({ error: authResult.error }),
+        JSON.stringify({ error: 'Invalid request body' }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+  }
 
-    const token = await this.authService.generateJWT(authResult.user!, this.env.JWT_SECRET);
+  private async handleRegister(request: CloudflareRequest): Promise<Response> {
+    try {
+      const userData = await request.json();
+      
+      const authResult = await this.authService.registerUser(userData);
+      if (!authResult.success) {
+        return new Response(
+          JSON.stringify({ error: authResult.error }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
 
-    return new Response(
-      JSON.stringify({ 
-        token, 
-        user: {
-          id: authResult.user!.id,
-          email: authResult.user!.email,
-          role: authResult.user!.role,
-          first_name: authResult.user!.first_name,
-          last_name: authResult.user!.last_name
-        }
-      }),
-      { headers: { 'Content-Type': 'application/json' } }
-    );
+      const token = await this.authService.generateJWT(authResult.user!, this.env.JWT_SECRET);
+
+      return new Response(
+        JSON.stringify({ 
+          token, 
+          user: {
+            id: authResult.user!.id,
+            email: authResult.user!.email,
+            role: authResult.user!.role,
+            first_name: authResult.user!.first_name,
+            last_name: authResult.user!.last_name
+          }
+        }),
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+    } catch (error) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid request body' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
   }
 
   private async handleGetVMs(userId: string): Promise<Response> {
@@ -273,15 +304,8 @@ export class CloudflareWorkerService {
     return { success: true, user };
   }
 
-  private async handleStaticRequest(request: CloudflareRequest): Promise<Response> {
-    // This would serve your built React application
-    // For now, return a simple response
-    return new Response('Static file serving not implemented yet', { status: 404 });
-  }
-
-  // Additional helper methods for VM operations
+  // Placeholder methods for VM operations
   private async handleCreateVM(request: CloudflareRequest, userId: string): Promise<Response> {
-    // Implementation for creating VMs
     return new Response(JSON.stringify({ message: 'VM creation not implemented yet' }), {
       status: 501,
       headers: { 'Content-Type': 'application/json' }
@@ -289,7 +313,6 @@ export class CloudflareWorkerService {
   }
 
   private async handleUpdateVM(request: CloudflareRequest, vmId: string, userId: string): Promise<Response> {
-    // Implementation for updating VMs
     return new Response(JSON.stringify({ message: 'VM update not implemented yet' }), {
       status: 501,
       headers: { 'Content-Type': 'application/json' }
@@ -297,7 +320,6 @@ export class CloudflareWorkerService {
   }
 
   private async handleDeleteVM(vmId: string, userId: string): Promise<Response> {
-    // Implementation for deleting VMs
     return new Response(JSON.stringify({ message: 'VM deletion not implemented yet' }), {
       status: 501,
       headers: { 'Content-Type': 'application/json' }
@@ -305,7 +327,6 @@ export class CloudflareWorkerService {
   }
 
   private async handleAddVMMetric(request: CloudflareRequest, vmId: string, userId: string): Promise<Response> {
-    // Implementation for adding VM metrics
     return new Response(JSON.stringify({ message: 'Metric addition not implemented yet' }), {
       status: 501,
       headers: { 'Content-Type': 'application/json' }

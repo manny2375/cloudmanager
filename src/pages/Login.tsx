@@ -19,13 +19,15 @@ export default function Login({ onLogin }: LoginProps) {
     setError('');
 
     try {
-      // For demo purposes, accept any email/password combination
-      // In production, this would make an actual API call
-      if (email && password) {
-        const mockToken = 'demo-jwt-token-' + Date.now();
-        onLogin(mockToken);
+      const result = await apiClient.login(email, password);
+      if (result.error) {
+        throw new Error(result.error);
+      }
+      
+      if (result.data?.token) {
+        onLogin(result.data.token);
       } else {
-        throw new Error('Please enter both email and password');
+        throw new Error('No token received');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -116,7 +118,7 @@ export default function Login({ onLogin }: LoginProps) {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Demo credentials</span>
+                <span className="px-2 bg-white text-gray-500">Login credentials</span>
               </div>
             </div>
             <div className="mt-4 text-center text-sm text-gray-600">

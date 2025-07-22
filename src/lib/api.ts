@@ -1,6 +1,6 @@
 // API client for communicating with Cloudflare Workers backend
 const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://api.yourdomain.com' // Your Workers API domain
+  ? 'https://cloudmanager-api.lamado.workers.dev' // Your Workers API domain
   : 'http://localhost:8787'; // Local development
 
 interface ApiResponse<T> {
@@ -67,25 +67,10 @@ class ApiClient {
 
   // Authentication
   async login(email: string, password: string) {
-    // For demo purposes, simulate successful login
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    if (email && password) {
-      return {
-        data: {
-          token: 'demo-jwt-token-' + Date.now(),
-          user: {
-            id: 'demo-user-id',
-            email: email,
-            role: 'admin',
-            first_name: 'Demo',
-            last_name: 'User'
-          }
-        }
-      };
-    } else {
-      return { error: 'Invalid credentials' };
-    }
+    return this.request<{ token: string; user: any }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
   }
 
   async register(userData: any) {

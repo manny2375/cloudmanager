@@ -1,21 +1,26 @@
-name = "cloud-management-dashboard"
-main = "src/lib/cloudflare-worker.ts"
+# Backend Worker Configuration
+name = "cloudmanager-api"
+main = "src/worker/index.ts"
 compatibility_date = "2024-01-15"
 
 [vars]
 ENVIRONMENT = "production"
-# Note: JWT_SECRET should be added as a secret via dashboard or CLI, not here
-# This is just for reference - use 'wrangler secret put JWT_SECRET' instead
 
 [[d1_databases]]
 binding = "DB"
 database_name = "cloudmanager-db"
 database_id = "d5a88802-2ef8-4878-b882-97f8b2aa37af"
 
-# Pages configuration for frontend
+# Production environment for the API worker
 [env.production]
-name = "cloud-management-dashboard-api"
-route = { pattern = "api.yourdomain.com/*", zone_name = "yourdomain.com" }
+name = "cloudmanager-api"
 
 [env.production.vars]
 ENVIRONMENT = "production"
+
+# Development environment
+[env.development]
+name = "cloudmanager-api-dev"
+
+[env.development.vars]
+ENVIRONMENT = "development"
