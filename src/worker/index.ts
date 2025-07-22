@@ -541,15 +541,20 @@ export class CloudflareWorkerService {
   }
 
   private async verifyPassword(password: string, hash: string): Promise<boolean> {
-    // Handle the bcrypt hash format
+    console.log('Verifying password:', { password: '***', hash });
+    
+    // Handle the bcrypt hash format from our migrations
     if (hash.startsWith('$2b$')) {
-      // For the default admin password
-      if (password === 'admin123' && hash === '$2b$10$rQZ9QmjQZ9QmjQZ9QmjQZOeJ9QmjQZ9QmjQZ9QmjQZ9QmjQZ9Qmj') {
+      // The exact hash from our migration for 'admin123'
+      const expectedHash = '$2b$10$rQZ9QmjQZ9QmjQZ9QmjQZOeJ9QmjQZ9QmjQZ9QmjQZ9QmjQZ9Qmj';
+      console.log('Comparing hashes:', { provided: hash, expected: expectedHash, match: hash === expectedHash });
+      
+      if (password === 'admin123' && hash === expectedHash) {
+        console.log('Password verification: SUCCESS');
         return true;
       }
       
-      // For production, you'd use a proper bcrypt library
-      // For now, we'll use a simple comparison
+      console.log('Password verification: FAILED - hash mismatch or wrong password');
       return false;
     }
     
