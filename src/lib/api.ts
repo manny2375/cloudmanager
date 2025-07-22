@@ -1,7 +1,8 @@
 // API client for communicating with Cloudflare Workers backend
-const API_BASE_URL = import.meta.env.PROD 
-  ? 'https://cloudmanager-api.lamado.workers.dev' // Your Workers API domain
-  : 'http://localhost:8787'; // Local development
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD 
+    ? 'https://cloudmanager-api.lamado.workers.dev' 
+    : 'http://localhost:8787');
 
 interface ApiResponse<T> {
   data?: T;
