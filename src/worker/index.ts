@@ -90,6 +90,23 @@ const HTML_CONTENT = `<!doctype html>
           activity: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
             React.createElement('polyline', { points: '22,12 18,12 15,21 9,3 6,12 2,12' })
           ),
+          moon: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+            React.createElement('path', { d: 'M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z' })
+          ),
+          settings: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+            React.createElement('circle', { cx: 12, cy: 12, r: 3 }),
+            React.createElement('path', { d: 'M12 1v6m0 10v6m11-7h-6m-10 0H1m15.5-6.5l-4.24 4.24M7.76 7.76L3.52 3.52m12.96 12.96l-4.24-4.24M7.76 16.24L3.52 20.48' })
+          ),
+          refresh: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+            React.createElement('polyline', { points: '23,4 23,10 17,10' }),
+            React.createElement('polyline', { points: '1,20 1,14 7,14' }),
+            React.createElement('path', { d: 'M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15' })
+          ),
+          plus: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
+            React.createElement('circle', { cx: 12, cy: 12, r: 10 }),
+            React.createElement('line', { x1: 12, y1: 8, x2: 12, y2: 16 }),
+            React.createElement('line', { x1: 8, y1: 12, x2: 16, y2: 12 })
+          ),
           key: React.createElement('svg', { className, fill: 'none', stroke: 'currentColor', viewBox: '0 0 24 24' },
             React.createElement('path', { d: 'M2 18v3c0 .6.4 1 1 1h4v-3h3v-3h2l1.4-1.4a6.5 6.5 0 1 0-4-4Z' }),
             React.createElement('circle', { cx: 16.5, cy: 7.5, r: .5 })
@@ -199,6 +216,9 @@ const HTML_CONTENT = `<!doctype html>
       // Dashboard Component
       function Dashboard({ onLogout }) {
         const [darkMode, setDarkMode] = useState(false);
+        const [selectedPlatform, setSelectedPlatform] = useState('all');
+        const [isNewVMModalOpen, setIsNewVMModalOpen] = useState(false);
+        const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
         const virtualMachines = [
           {
@@ -218,8 +238,12 @@ const HTML_CONTENT = `<!doctype html>
           }
         ];
 
+        const filteredVMs = selectedPlatform === 'all' 
+          ? virtualMachines 
+          : virtualMachines.filter(vm => vm.platform === selectedPlatform);
+
         const getTotalMonthlyCost = () => {
-          return virtualMachines
+          return filteredVMs
             .filter(vm => vm.status === 'running')
             .reduce((total, vm) => total + vm.costPerHour * 24 * 30, 0)
             .toFixed(2);
@@ -233,6 +257,11 @@ const HTML_CONTENT = `<!doctype html>
           }
         };
 
+        const toggleDarkMode = () => {
+          setDarkMode(!darkMode);
+          document.documentElement.classList.toggle('dark');
+        };
+
         const getPlatformIcon = (platform) => {
           switch (platform) {
             case 'aws': return React.createElement(Icon, { type: 'cloud', className: 'w-5 h-5 text-orange-500' });
@@ -242,19 +271,40 @@ const HTML_CONTENT = `<!doctype html>
           }
         };
 
-        return React.createElement('div', { className: 'min-h-screen bg-gray-50' },
+        return React.createElement('div', { className: \`min-h-screen \${darkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-50 text-gray-900'}\` },
           // Header
-          React.createElement('header', { className: 'bg-white shadow-sm' },
+          React.createElement('header', { className: darkMode ? 'bg-gray-800 shadow-sm' : 'bg-white shadow-sm' },
             React.createElement('div', { className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4' },
               React.createElement('div', { className: 'flex items-center justify-between' },
                 React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'monitor', className: 'h-8 w-8 text-blue-600 mr-3' }),
-                  React.createElement('h1', { className: 'text-2xl font-semibold text-gray-900' }, 'Cloud Manager')
+                  React.createElement(Icon, { type: 'monitor', className: \`h-8 w-8 \${darkMode ? 'text-blue-400' : 'text-blue-600'} mr-3\` }),
+                  React.createElement('h1', { className: 'text-2xl font-semibold' }, 'Cloud Manager')
                 ),
-                React.createElement('button', {
-                  onClick: onLogout,
-                  className: 'p-2 rounded-full hover:bg-gray-100'
-                }, React.createElement(Icon, { type: 'key', className: 'w-6 h-6 text-gray-600' }))
+                React.createElement('div', { className: 'flex items-center space-x-4' },
+                  React.createElement('button', {
+                    onClick: toggleDarkMode,
+                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
+                  }, darkMode ? 
+                    React.createElement(Icon, { type: 'sun', className: 'w-6 h-6 text-yellow-400' }) :
+                    React.createElement(Icon, { type: 'moon', className: 'w-6 h-6 text-gray-600' })
+                  ),
+                  React.createElement('button', {
+                    onClick: () => setIsSettingsOpen(true),
+                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
+                  }, React.createElement(Icon, { type: 'settings', className: \`w-6 h-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` })),
+                  React.createElement('button', {
+                    onClick: () => alert('Metrics view coming soon!'),
+                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
+                  }, React.createElement(Icon, { type: 'activity', className: \`w-6 h-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` })),
+                  React.createElement('button', {
+                    onClick: () => alert('Logs view coming soon!'),
+                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
+                  }, React.createElement(Icon, { type: 'database', className: \`w-6 h-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` })),
+                  React.createElement('button', {
+                    onClick: onLogout,
+                    className: \`p-2 rounded-full \${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}\`
+                  }, React.createElement(Icon, { type: 'key', className: \`w-6 h-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }))
+                )
               )
             )
           ),
@@ -263,70 +313,125 @@ const HTML_CONTENT = `<!doctype html>
           React.createElement('main', { className: 'max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8' },
             // Stats Cards
             React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-4 gap-6 mb-8' },
-              React.createElement('div', { className: 'bg-white rounded-lg shadow p-6' },
+              React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6\` },
                 React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'server', className: 'w-8 h-8 text-blue-500 mr-4' }),
+                  React.createElement(Icon, { type: 'server', className: \`w-8 h-8 \${darkMode ? 'text-blue-400' : 'text-blue-500'} mr-4\` }),
                   React.createElement('div', {},
-                    React.createElement('p', { className: 'text-sm font-medium text-gray-600' }, 'Total VMs'),
-                    React.createElement('p', { className: 'text-2xl font-semibold text-gray-900' }, virtualMachines.length)
+                    React.createElement('p', { className: \`text-sm font-medium \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 'Total VMs'),
+                    React.createElement('p', { className: 'text-2xl font-semibold' }, virtualMachines.length)
                   )
                 )
               ),
-              React.createElement('div', { className: 'bg-white rounded-lg shadow p-6' },
+              React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6\` },
                 React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'power', className: 'w-8 h-8 text-green-500 mr-4' }),
+                  React.createElement(Icon, { type: 'power', className: \`w-8 h-8 \${darkMode ? 'text-green-400' : 'text-green-500'} mr-4\` }),
                   React.createElement('div', {},
-                    React.createElement('p', { className: 'text-sm font-medium text-gray-600' }, 'Running'),
-                    React.createElement('p', { className: 'text-2xl font-semibold text-gray-900' }, 
-                      virtualMachines.filter(vm => vm.status === 'running').length
+                    React.createElement('p', { className: \`text-sm font-medium \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 'Running'),
+                    React.createElement('p', { className: 'text-2xl font-semibold' }, 
+                      filteredVMs.filter(vm => vm.status === 'running').length
                     )
                   )
                 )
               ),
-              React.createElement('div', { className: 'bg-white rounded-lg shadow p-6' },
+              React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6\` },
                 React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'database', className: 'w-8 h-8 text-purple-500 mr-4' }),
+                  React.createElement(Icon, { type: 'database', className: \`w-8 h-8 \${darkMode ? 'text-purple-400' : 'text-purple-500'} mr-4\` }),
                   React.createElement('div', {},
-                    React.createElement('p', { className: 'text-sm font-medium text-gray-600' }, 'Total Storage'),
-                    React.createElement('p', { className: 'text-2xl font-semibold text-gray-900' }, 
-                      virtualMachines.reduce((acc, vm) => acc + vm.storage, 0) + 'GB'
+                    React.createElement('p', { className: \`text-sm font-medium \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 'Total Storage'),
+                    React.createElement('p', { className: 'text-2xl font-semibold' }, 
+                      filteredVMs.reduce((acc, vm) => acc + vm.storage, 0) + 'GB'
                     )
                   )
                 )
               ),
-              React.createElement('div', { className: 'bg-white rounded-lg shadow p-6' },
+              React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6\` },
                 React.createElement('div', { className: 'flex items-center' },
-                  React.createElement(Icon, { type: 'dollar', className: 'w-8 h-8 text-emerald-500 mr-4' }),
+                  React.createElement(Icon, { type: 'dollar', className: \`w-8 h-8 \${darkMode ? 'text-emerald-400' : 'text-emerald-500'} mr-4\` }),
                   React.createElement('div', {},
-                    React.createElement('p', { className: 'text-sm font-medium text-gray-600' }, 'Monthly Cost'),
-                    React.createElement('p', { className: 'text-2xl font-semibold text-gray-900' }, '$' + getTotalMonthlyCost())
+                    React.createElement('p', { className: \`text-sm font-medium \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 'Monthly Cost'),
+                    React.createElement('p', { className: 'text-2xl font-semibold' }, '$' + getTotalMonthlyCost())
                   )
                 )
               )
             ),
             
-            // VM Table
-            React.createElement('div', { className: 'bg-white shadow rounded-lg overflow-hidden' },
-              React.createElement('div', { className: 'px-6 py-4 border-b border-gray-200' },
-                React.createElement('h3', { className: 'text-lg font-medium text-gray-900' }, 'Virtual Machines')
+            // Controls
+            React.createElement('div', { className: 'flex justify-between items-center mb-6' },
+              React.createElement('div', { className: 'flex space-x-2' },
+                React.createElement('button', {
+                  onClick: () => setSelectedPlatform('all'),
+                  className: \`px-4 py-2 rounded-md \${
+                    selectedPlatform === 'all' 
+                      ? darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
+                      : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }\`
+                }, 'All Platforms'),
+                React.createElement('button', {
+                  onClick: () => setSelectedPlatform('aws'),
+                  className: \`px-4 py-2 rounded-md \${
+                    selectedPlatform === 'aws' 
+                      ? darkMode ? 'bg-orange-900 text-orange-100' : 'bg-orange-100 text-orange-800'
+                      : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }\`
+                }, 'AWS'),
+                React.createElement('button', {
+                  onClick: () => setSelectedPlatform('azure'),
+                  className: \`px-4 py-2 rounded-md \${
+                    selectedPlatform === 'azure' 
+                      ? darkMode ? 'bg-blue-900 text-blue-100' : 'bg-blue-100 text-blue-800'
+                      : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }\`
+                }, 'Azure'),
+                React.createElement('button', {
+                  onClick: () => setSelectedPlatform('proxmox'),
+                  className: \`px-4 py-2 rounded-md \${
+                    selectedPlatform === 'proxmox' 
+                      ? darkMode ? 'bg-green-900 text-green-100' : 'bg-green-100 text-green-800'
+                      : darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }\`
+                }, 'Proxmox')
               ),
+              React.createElement('div', { className: 'flex space-x-2' },
+                React.createElement('button', {
+                  onClick: () => window.location.reload(),
+                  className: \`flex items-center px-4 py-2 rounded-md \${
+                    darkMode ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-600 hover:bg-gray-50'
+                  }\`
+                },
+                  React.createElement(Icon, { type: 'refresh', className: 'w-4 h-4 mr-2' }),
+                  'Refresh'
+                ),
+                React.createElement('button', {
+                  onClick: () => setIsNewVMModalOpen(true),
+                  className: \`flex items-center px-4 py-2 text-white rounded-md \${
+                    darkMode ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-600 hover:bg-blue-700'
+                  }\`
+                },
+                  React.createElement(Icon, { type: 'plus', className: 'w-4 h-4 mr-2' }),
+                  'New VM'
+                )
+              )
+            ),
+
+            // VM Table
+            React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} shadow rounded-lg overflow-hidden\` },
               React.createElement('div', { className: 'overflow-x-auto' },
                 React.createElement('table', { className: 'min-w-full divide-y divide-gray-200' },
-                  React.createElement('thead', { className: 'bg-gray-50' },
+                  React.createElement('thead', { className: darkMode ? 'bg-gray-700' : 'bg-gray-50' },
                     React.createElement('tr', {},
-                      ['Name', 'Status', 'Platform', 'Type', 'OS', 'IP Address', 'Resources', 'Cost'].map(header =>
+                      ['Name', 'Status', 'Platform', 'Type', 'OS', 'IP Address', 'Resources', 'Cost', 'Actions'].map(header =>
                         React.createElement('th', {
                           key: header,
-                          className: 'px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'
+                          className: \`px-6 py-3 text-left text-xs font-medium \${darkMode ? 'text-gray-300' : 'text-gray-500'} uppercase tracking-wider\`
                         }, header)
                       )
                     )
                   ),
-                  React.createElement('tbody', { className: 'bg-white divide-y divide-gray-200' },
-                    virtualMachines.map(vm =>
-                      React.createElement('tr', { key: vm.id, className: 'hover:bg-gray-50' },
+                  React.createElement('tbody', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} divide-y \${darkMode ? 'divide-gray-700' : 'divide-gray-200'}\` },
+                    filteredVMs.map(vm =>
+                      React.createElement('tr', { key: vm.id, className: darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50' },
                         React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
-                          React.createElement('div', { className: 'text-sm font-medium text-gray-900' }, vm.name)
+                          React.createElement('div', { className: \`text-sm font-medium \${darkMode ? 'text-gray-100' : 'text-gray-900'}\` }, vm.name)
                         ),
                         React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
                           React.createElement('span', { 
@@ -336,31 +441,69 @@ const HTML_CONTENT = `<!doctype html>
                         React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
                           React.createElement('div', { className: 'flex items-center' },
                             getPlatformIcon(vm.platform),
-                            React.createElement('span', { className: 'ml-2 text-sm text-gray-900' }, vm.platform.toUpperCase())
+                            React.createElement('span', { className: \`ml-2 text-sm \${darkMode ? 'text-gray-100' : 'text-gray-900'}\` }, vm.platform.toUpperCase())
                           )
                         ),
-                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, vm.type),
-                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, vm.os),
-                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-sm text-gray-500' }, vm.ip),
+                        React.createElement('td', { className: \`px-6 py-4 whitespace-nowrap text-sm \${darkMode ? 'text-gray-300' : 'text-gray-500'}\` }, vm.type),
+                        React.createElement('td', { className: \`px-6 py-4 whitespace-nowrap text-sm \${darkMode ? 'text-gray-300' : 'text-gray-500'}\` }, vm.os),
+                        React.createElement('td', { className: \`px-6 py-4 whitespace-nowrap text-sm \${darkMode ? 'text-gray-300' : 'text-gray-500'}\` }, vm.ip),
                         React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
-                          React.createElement('div', { className: 'text-sm text-gray-900' }, 
+                          React.createElement('div', { className: \`text-sm \${darkMode ? 'text-gray-100' : 'text-gray-900'}\` }, 
                             \`CPU:\${vm.cpu}C | RAM:\${vm.memory}G | HD:\${vm.storage}G\`
                           )
                         ),
                         React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap' },
                           React.createElement('div', { className: 'text-sm' },
-                            React.createElement('div', { className: 'font-medium text-gray-900' }, 
+                            React.createElement('div', { className: \`font-medium \${darkMode ? 'text-gray-100' : 'text-gray-900'}\` }, 
                               \`$\${vm.costPerHour.toFixed(4)}/hr\`
                             ),
-                            React.createElement('div', { className: 'text-gray-500' }, 
+                            React.createElement('div', { className: darkMode ? 'text-gray-300' : 'text-gray-500' }, 
                               \`$\${vm.status === 'stopped' ? '0.00' : (vm.costPerHour * 24 * 30).toFixed(2)}/mo\`
                             )
+                          )
+                        ),
+                        React.createElement('td', { className: 'px-6 py-4 whitespace-nowrap text-right text-sm font-medium' },
+                          React.createElement('div', { className: 'flex justify-end space-x-4' },
+                            React.createElement('button', {
+                              onClick: () => alert(\`\${vm.status === 'running' ? 'Stopping' : 'Starting'} \${vm.name}...\`),
+                              className: \`\${darkMode ? 'text-blue-400 hover:text-blue-300' : 'text-blue-600 hover:text-blue-900'}\`
+                            }, vm.status === 'running' ? 'Stop' : 'Start'),
+                            React.createElement('button', {
+                              onClick: () => alert(\`Configuring \${vm.name}...\`),
+                              className: darkMode ? 'text-gray-300 hover:text-gray-100' : 'text-gray-600 hover:text-gray-900'
+                            }, 'Configure'),
+                            React.createElement('button', {
+                              onClick: () => confirm(\`Delete \${vm.name}?\`) && alert(\`Deleting \${vm.name}...\`),
+                              className: darkMode ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-900'
+                            }, 'Delete')
                           )
                         )
                       )
                     )
                   )
                 )
+              )
+            )
+          ),
+
+          // New VM Modal
+          isNewVMModalOpen && React.createElement('div', {
+            className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50'
+          },
+            React.createElement('div', { className: \`\${darkMode ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow-xl max-w-md w-full p-6\` },
+              React.createElement('h3', { className: 'text-xl font-semibold mb-4' }, 'Create New VM'),
+              React.createElement('p', { className: \`mb-6 \${darkMode ? 'text-gray-300' : 'text-gray-600'}\` }, 
+                'VM creation feature coming soon!'
+              ),
+              React.createElement('div', { className: 'flex justify-end' },
+                React.createElement('button', {
+                  onClick: () => setIsNewVMModalOpen(false),
+                  className: \`px-4 py-2 rounded-md \${
+                    darkMode
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+                      : 'bg-gray-200 hover:bg-gray-300 text-gray-700'
+                  }\`
+                }, 'Close')
               )
             )
           )
