@@ -38,9 +38,11 @@ interface DashboardProps {
   darkMode: boolean;
   onToggleDarkMode: () => void;
   onLogout: () => void;
+  onViewLogs?: () => void;
+  onViewMetrics?: () => void;
 }
 
-export function Dashboard({ darkMode, onToggleDarkMode, onLogout }: DashboardProps) {
+export function Dashboard({ darkMode, onToggleDarkMode, onLogout, onViewLogs, onViewMetrics }: DashboardProps) {
   const [selectedPlatform, setSelectedPlatform] = useState<'all' | 'aws' | 'azure' | 'proxmox'>('all');
   const [isNewVMModalOpen, setIsNewVMModalOpen] = useState(false);
   const [isConfigureModalOpen, setIsConfigureModalOpen] = useState(false);
@@ -173,10 +175,18 @@ export function Dashboard({ darkMode, onToggleDarkMode, onLogout }: DashboardPro
                 <Settings className={`w-6 h-6 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`} />
               </button>
               <button 
+                onClick={onViewMetrics}
                 className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
                 aria-label="View activity"
               >
                 <Activity className={darkMode ? 'w-6 h-6 text-gray-300' : 'w-6 h-6 text-gray-600'} />
+              </button>
+              <button 
+                onClick={onViewLogs}
+                className={`p-2 rounded-full ${darkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-100'}`}
+                aria-label="View logs"
+              >
+                <Database className={darkMode ? 'w-6 h-6 text-gray-300' : 'w-6 h-6 text-gray-600'} />
               </button>
               <button
                 onClick={onLogout}

@@ -27,6 +27,10 @@ class ApiClient {
     localStorage.removeItem('auth_token');
   }
 
+  isAuthenticated(): boolean {
+    return !!this.token;
+  }
+
   private async request<T>(
     endpoint: string, 
     options: RequestInit = {}
@@ -63,10 +67,25 @@ class ApiClient {
 
   // Authentication
   async login(email: string, password: string) {
-    return this.request<{ token: string; user: any }>('/api/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
+    // For demo purposes, simulate successful login
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    if (email && password) {
+      return {
+        data: {
+          token: 'demo-jwt-token-' + Date.now(),
+          user: {
+            id: 'demo-user-id',
+            email: email,
+            role: 'admin',
+            first_name: 'Demo',
+            last_name: 'User'
+          }
+        }
+      };
+    } else {
+      return { error: 'Invalid credentials' };
+    }
   }
 
   async register(userData: any) {

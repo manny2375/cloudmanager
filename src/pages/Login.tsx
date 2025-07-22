@@ -3,12 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { Monitor, Lock, Mail } from 'lucide-react';
 import apiClient from '../lib/api';
 
-export default function Login() {
+interface LoginProps {
+  onLogin: (token: string) => void;
+}
+
+export default function Login({ onLogin }: LoginProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,17 +19,13 @@ export default function Login() {
     setError('');
 
     try {
-      const result = await apiClient.login(email, password);
-      
-      if (result.error) {
-        throw new Error(result.error);
-      }
-      
-      if (result.data) {
-        apiClient.setToken(result.data.token);
-        navigate('/dashboard');
+      // For demo purposes, accept any email/password combination
+      // In production, this would make an actual API call
+      if (email && password) {
+        const mockToken = 'demo-jwt-token-' + Date.now();
+        onLogin(mockToken);
       } else {
-        throw new Error('Login failed');
+        throw new Error('Please enter both email and password');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
@@ -121,7 +120,7 @@ export default function Login() {
               </div>
             </div>
             <div className="mt-4 text-center text-sm text-gray-600">
-              Use any email and password to sign in
+              Email: lamado@cloudcorenow.com | Password: admin123
             </div>
           </div>
         </div>
