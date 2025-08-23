@@ -1,8 +1,5 @@
-For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.
+For all website designs, make them beautiful, unique, and production-ready (not cookie-cutter). Use React + JSX with Tailwind CSS, React hooks, and Lucide React for icons. Do not add extra UI packages unless I request them or they are absolutely necessary. Use Lucide React for logos/icons. Use Unsplash stock photos with valid https://images.unsplash.com/... URLs directly in <img> tags (do not download).
 
-By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
+Designs must be fully responsive (desktop, tablet, mobile) and meet accessibility best practices (semantic HTML, alt text, color contrast). Include smooth hover/focus states, subtle transitions, and tasteful animations (e.g., Framer Motion). Code should be clean, modular, and reusable with flexible props. Optimize performance with lazy-loaded images and efficient hook usage.
 
-Use icons from lucide-react for logos.
-
-Use stock photos from unsplash where appropriate, only valid URLs you know exist. Do not download the images, only link to them in image tags.
-
+Favor grid-based layouts, rounded corners (2xl), soft shadows, and varied typography (xl for headings, base for body). Default building blocks should include polished Cards, Navbars, Hero sections, CTAs, Forms, and Footers. Pages must feel professional, visually engaging, and ready for production deployment.
