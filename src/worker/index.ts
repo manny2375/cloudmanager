@@ -424,14 +424,25 @@ export class CloudflareWorkerService {
       );
 
       const data = `${headerB64}.${payloadB64}`;
-      const signature = Uint8Array.from(atob(signatureB64.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+      
+      // Helper function to add padding to Base64URL strings
+      const addPadding = (str: string): string => {
+        const padding = 4 - (str.length % 4);
+        return padding === 4 ? str : str + '='.repeat(padding);
+      };
+      
+      // Convert Base64URL to Base64 and add proper padding
+      const signatureB64Padded = addPadding(signatureB64.replace(/-/g, '+').replace(/_/g, '/'));
+      const signature = Uint8Array.from(atob(signatureB64Padded), c => c.charCodeAt(0));
 
       const isValid = await crypto.subtle.verify('HMAC', key, signature, encoder.encode(data));
       if (!isValid) {
         return null;
       }
 
-      const payload = JSON.parse(atob(payloadB64));
+      // Convert Base64URL to Base64 and add proper padding for payload
+      const payloadB64Padded = addPadding(payloadB64.replace(/-/g, '+').replace(/_/g, '/'));
+      const payload = JSON.parse(atob(payloadB64Padded));
       
       // Check expiration
       if (payload.exp < Math.floor(Date.now() / 1000)) {
